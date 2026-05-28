@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.1
+##alpha0.1.2
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -342,8 +342,8 @@ setup_ufw() {
 ##IPTABLES##
 iptables_rules(){
 #Защита от DDoS - лимит новых соединений
-iptables -A INPUT -p tcp --dport 5626 -m state --state NEW -m limit --limit 10/min --limit-burst 20 -j ACCEPT
-iptables -A INPUT -p tcp --dport 5626 -m state --state NEW -j DROP
+iptables -A INPUT -p tcp --dport $UFW_SSH_PORT -m state --state NEW -m limit --limit 10/min --limit-burst 20 -j ACCEPT
+iptables -A INPUT -p tcp --dport $UFW_SSH_PORT -m state --state NEW -j DROP
 iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m limit --limit 50/min --limit-burst 100 -j ACCEPT
 #Защита от SYN flood
 iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
