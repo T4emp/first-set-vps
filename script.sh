@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1
+##alpha0.1.1
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -163,15 +163,20 @@ disable_root_login() {
 ##CREATE PUB KEY AND ACTIVATE##
 setup_pubkey_auth() {
     read -rp "$(echo -e "${GREEN}Enter username:${NC} ")" USERNAME
-
     if ! id "$USERNAME" &>/dev/null; then
         echo -e "${RED}User $USERNAME not found${NC}"
         read -rp "$(echo -e "${GREEN}Press any key to continue...${NC}")" -n 1
         return 1
     fi
-
     SSH_DIR="/home/$USERNAME/.ssh"
     AUTH_KEYS_FILE="$SSH_DIR/authorized_keys"
+
+    if [ -d "/etc/ssh/sshd_config.d" ]; then
+        rm -rf /etc/ssh/sshd_config.d
+        mkdir /etc/ssh/sshd_config.d
+        chmod 000 /etc/ssh/sshd_config.d
+        echo -e "${GREEN}Removed and locked /etc/ssh/sshd_config.d${NC}"
+    fi
 
     if grep -qE "^PasswordAuthentication no" "$SSHD_CONFIG" && grep -qE "^PubkeyAuthentication yes" "$SSHD_CONFIG"; then
         echo -e "${YELLOW}PubkeyAuthentication already configured${NC}"
