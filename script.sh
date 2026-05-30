@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.2
+##alpha0.1.3
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -163,20 +163,15 @@ disable_root_login() {
 ##CREATE PUB KEY AND ACTIVATE##
 setup_pubkey_auth() {
     read -rp "$(echo -e "${GREEN}Enter username:${NC} ")" USERNAME
+
     if ! id "$USERNAME" &>/dev/null; then
         echo -e "${RED}User $USERNAME not found${NC}"
         read -rp "$(echo -e "${GREEN}Press any key to continue...${NC}")" -n 1
         return 1
     fi
+
     SSH_DIR="/home/$USERNAME/.ssh"
     AUTH_KEYS_FILE="$SSH_DIR/authorized_keys"
-
-    if [ -d "/etc/ssh/sshd_config.d" ]; then
-        rm -rf /etc/ssh/sshd_config.d
-        mkdir /etc/ssh/sshd_config.d
-        chmod 000 /etc/ssh/sshd_config.d
-        echo -e "${GREEN}Removed and locked /etc/ssh/sshd_config.d${NC}"
-    fi
 
     if grep -qE "^PasswordAuthentication no" "$SSHD_CONFIG" && grep -qE "^PubkeyAuthentication yes" "$SSHD_CONFIG"; then
         echo -e "${YELLOW}PubkeyAuthentication already configured${NC}"
@@ -338,12 +333,14 @@ setup_ufw() {
 
     echo -e "${GREEN}UFW rules added${NC}"
     read -rp "$(echo -e "${GREEN}Press any key to continue...${NC}")" -n 1
+
+    ufw --force enable
 }
 ##IPTABLES##
 iptables_rules(){
 #Защита от DDoS - лимит новых соединений
-iptables -A INPUT -p tcp --dport $UFW_SSH_PORT -m state --state NEW -m limit --limit 10/min --limit-burst 20 -j ACCEPT
-iptables -A INPUT -p tcp --dport $UFW_SSH_PORT -m state --state NEW -j DROP
+iptables -A INPUT -p tcp --dport 5626 -m state --state NEW -m limit --limit 10/min --limit-burst 20 -j ACCEPT
+iptables -A INPUT -p tcp --dport 5626 -m state --state NEW -j DROP
 iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m limit --limit 50/min --limit-burst 100 -j ACCEPT
 #Защита от SYN flood
 iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
@@ -378,8 +375,6 @@ iptables -A INPUT -m hashlimit \
 if command -v iptables-save &>/dev/null; then
     iptables-save > /etc/iptables/rules.v4 2>/dev/null || iptables-save > /etc/iptables.rules
 fi
-#Включаем ufw
-ufw --force enable
 #Включаем защиту в sysctl
 add_if_missing() {
     local LINE="$1"
