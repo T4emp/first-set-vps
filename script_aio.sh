@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1
+##alpha0.1.1
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -59,12 +59,12 @@ clean_apt(){
 }
 ##INSTALL BASED APPS##
 install_based(){
-    update true
+    update
     echo -e "${GREEN}Installing apt...${NC}"
     apt-get install ufw -y
     apt-get install -yqq --no-install-recommends ca-certificates
     apt-get install fail2ban -y
-    clean_apt true
+    clean_apt
     reboot_required
     echo -e "${GREEN}Successful${NC}"
 }
@@ -317,12 +317,47 @@ iptables -A INPUT -i lo -j ACCEPT
 #SAVE RULES
 iptables-save > /etc/iptables/rules.v4
 }
+##FAIL2BAN
+fail2ban() {
+cat > /etc/fail2ban/jail.local << EOF
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1
+bantime = 3600
+findtime = 600
+maxretry = 5
+banaction = iptables-multiport
+
+[sshd]
+enabled = true
+port = $NEW_PORT
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 86400
+findtime = 600
+EOF
+
+echo "fail2ban configured"
+
+systemctl enable fail2ban > /dev/null 2>&1
+systemctl restart fail2ban
+
+sleep 2
+if systemctl is-active --quiet fail2ban; then
+    echo "fail2ban is running"
+    fail2ban-client status sshd
+else
+    echo "fail2ban failed to start"
+    journalctl -u fail2ban --no-pager -n 20
+    exit 1
+fi
+}
 ##MAIN SCRIPT##
 enable_root
 reboot_required
 update
-clean_apt
 install_based
+clean_apt
 change_port
 create_user
 disable_root_login
@@ -332,3 +367,4 @@ disable_ipv6_ufw
 reset_ufw
 setup_ufw
 iptables_rules
+fail2ban
