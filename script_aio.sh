@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.7
+##alpha0.1.8
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -289,7 +289,7 @@ iptables_rules() {
 
     if ! dpkg -l | grep -q iptables-persistent; then
         DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent > /dev/null 2>&1
-        echo "${GREEN}IPtables-persistent installed${NC}"
+        echo -e "${GREEN}IPtables-persistent installed${NC}"
     fi
 
     #DDOS
@@ -392,6 +392,6 @@ setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
+fail2ban
 setup_ufw
 iptables_rules
-fail2ban
