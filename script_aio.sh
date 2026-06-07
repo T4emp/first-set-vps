@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.5
+##alpha0.1.6
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -52,6 +52,7 @@ install_based(){
     apt-get install ufw -y
     apt-get install -yqq --no-install-recommends ca-certificates
     apt-get install fail2ban -y
+	apt-get install nano -y
     reboot_required
     echo -e "${GREEN}Successful${NC}"
 }
