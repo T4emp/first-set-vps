@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.3
+##alpha0.1.4
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -125,7 +125,6 @@ setup_pubkey_auth() {
     AUTH_KEYS_FILE="$SSH_DIR/authorized_keys"
 
     mkdir -p "$SSH_DIR"
-    read -rp "$(echo -e "${GREEN}Enter pub key:${NC} ")" PUB_KEY
     echo "$PUB_KEY" > "$AUTH_KEYS_FILE"
     chmod 600 "$AUTH_KEYS_FILE"
     chmod 700 "$SSH_DIR"
