@@ -392,6 +392,6 @@ setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
-fail2ban
+#fail2ban
 setup_ufw
-#iptables_rules
+iptables_rules
