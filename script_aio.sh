@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.2
+##alpha0.2.1
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -334,7 +334,7 @@ iptables_rules() {
     iptables -A INPUT -s 198.51.100.0/24 -j DROP
     iptables -A INPUT -s 203.0.113.0/24 -j DROP
     iptables -A INPUT -s 224.0.0.0/4 -j DROP
-    iptables -A INPUT -s 255.255.255.255 -j DROP
+    iptables -A INPUT -s 255.255.255.255/1 -j DROP
 
     #ENABLE ESTABLISHED
     iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -386,12 +386,12 @@ update
 install_based
 clean_apt
 change_port
-#create_user
-#disable_root_login
-#setup_pubkey_auth
+create_user
+disable_root_login
+setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
 fail2ban
 setup_ufw
-iptables_rules
+#iptables_rules
