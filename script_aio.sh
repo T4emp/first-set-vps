@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.1
+##alpha0.1.2
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -8,7 +8,6 @@ GREEN="\e[32m"
 RED="\e[31m"
 YELLOW="\e[33m"
 NC="\e[0m"
-ENTER=""
 UFW_CONF="/etc/default/ufw"
 GRUB_CONF="/etc/default/grub"
 ##SUDO\ROOT##
@@ -41,20 +40,9 @@ reboot_required() {
 }
 ##UPDATE##
 update(){
-    local SKIP_ENTER="$1"
-
     echo -e "${GREEN}Update apt...${NC}"
     apt update && apt upgrade -y
     reboot_required
-    echo -e "${GREEN}Successful${NC}"
-}
-##CLEAN APT##
-clean_apt(){
-    local SKIP_ENTER="$1"
-
-    echo -e "${GREEN}Cleaning apt...${NC}"
-    apt autoremove -y
-    apt clean
     echo -e "${GREEN}Successful${NC}"
 }
 ##INSTALL BASED APPS##
@@ -64,10 +52,17 @@ install_based(){
     apt-get install ufw -y
     apt-get install -yqq --no-install-recommends ca-certificates
     apt-get install fail2ban -y
-    clean_apt
     reboot_required
     echo -e "${GREEN}Successful${NC}"
 }
+##CLEAN APT##
+clean_apt(){
+    echo -e "${GREEN}Cleaning apt...${NC}"
+    apt autoremove -y
+    apt clean
+    echo -e "${GREEN}Successful${NC}"
+}
+
 ##SSH PORT##
 change_port() {
 if grep -qE "^#Port " "$SSHD_CONFIG"; then
@@ -162,8 +157,8 @@ enable_bbr() {
 AVAILABLE=$(sysctl -n net.ipv4.tcp_available_congestion_control)
 CURRENT=$(sysctl -n net.ipv4.tcp_congestion_control)
 
-echo -e "Available: $AVAILABLE"
-echo -e "Current:   $CURRENT"
+echo -e "${YELLOW}Available: $AVAILABLE${NC}"
+echo -e "${GREEN}Current:   $CURRENT${NC}"
 
 if echo "$AVAILABLE" | grep -qw "bbr3"; then
     BEST_BBR="bbr3"
@@ -172,16 +167,16 @@ elif echo "$AVAILABLE" | grep -qw "bbr2"; then
 elif echo "$AVAILABLE" | grep -qw "bbr"; then
     BEST_BBR="bbr"
 else
-    echo -e "BBR is not available on this system"
+    echo -e "${YELLOW}BBR is not available on this system${NC}"
     exit 1
 fi
 
 if [ "$CURRENT" = "$BEST_BBR" ]; then
-    echo -e "BBR already set to best available version ($BEST_BBR), skipping"
+    echo -e "${GREEN}BBR already set to best available version ($BEST_BBR), skipping${NC}"
 else
     modprobe tcp_bbr 2>/dev/null
     sysctl -w net.ipv4.tcp_congestion_control="$BEST_BBR"
-    echo -e "BBR activated: $BEST_BBR"
+    echo -e "${GREEN}BBR activated: $BEST_BBR${NC}"
 fi
 
 declare -A PARAMS=(
@@ -209,9 +204,10 @@ done
 
 sysctl -p "$SYSCTL_CFG" > /dev/null
 
-echo -e "All network parameters applied and saved"
+echo -e "${GREEN}All network parameters applied and saved${NC}"
 }
 ##IPV6##
+disable_ipv6_ufw(){
 PARAMS=(
     "net.ipv6.conf.all.disable_ipv6=1"
     "net.ipv6.conf.default.disable_ipv6=1"
@@ -228,29 +224,29 @@ done
 sysctl -p "$SYSCTL_CFG" > /dev/null
 
 if grep -q "ipv6.disable=1" "$GRUB_CONF"; then
-    echo "GRUB already configured"
+    echo -e "${YELLOW}GRUB already configured${NC}"
 else
     sed -i 's/GRUB_CMDLINE_LINUX="\(.*\)"/GRUB_CMDLINE_LINUX="\1 ipv6.disable=1"/' "$GRUB_CONF"
     update-grub 2>/dev/null
-    echo "GRUB updated"
+    echo -e "${GREEN}GRUB updated${NC}"
 fi
 
 if [ -f "$UFW_CONF" ]; then
     if grep -q "^IPV6=no" "$UFW_CONF"; then
-        echo "UFW IPv6 already disabled"
+        echo -e "${YELLOW}UFW IPv6 already disabled${NC}"
     else
         sed -i "s/^IPV6=.*/IPV6=no/" "$UFW_CONF"
-        echo "UFW IPv6 disabled"
+        echo -e "${GREEN}UFW IPv6 disabled${NC}"
         if ufw status | grep -q "Status: active"; then
             ufw reload > /dev/null 2>&1
-            echo "UFW reloaded"
+            echo -e "${YELLOW}UFW reloaded${NC}"
         fi
     fi
 else
-    echo "UFW config not found, skipping"
+    echo -e "${RED}UFW config not found, skipping${NC}"
 fi
 
-echo "IPv6 disabled"
+echo "${GREEN}IPv6 disabled${NC}"
 }
 ##RESET UFW AND IPTABLES##
 reset_ufw(){
@@ -337,17 +333,17 @@ bantime = 86400
 findtime = 600
 EOF
 
-echo "fail2ban configured"
+echo -e "${GREEN}fail2ban configured${NC}"
 
 systemctl enable fail2ban > /dev/null 2>&1
 systemctl restart fail2ban
 
 sleep 2
 if systemctl is-active --quiet fail2ban; then
-    echo "fail2ban is running"
+    echo -e "${GREEN}fail2ban is running${NC}"
     fail2ban-client status sshd
 else
-    echo "fail2ban failed to start"
+    echo -e "${RED}fail2ban failed to start${NC}"
     journalctl -u fail2ban --no-pager -n 20
     exit 1
 fi
