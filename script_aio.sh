@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.6
+##alpha0.1.7
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -155,6 +155,12 @@ setup_pubkey_auth() {
 }
 ##BBR##
 enable_bbr() {
+
+if [ ! -f "$SYSCTL_CFG" ]; then
+	touch "$SYSCTL_CFG"
+	echo -e "${GREEN}Created $SYSCTL_CFG${NC}"
+fi
+
 AVAILABLE=$(sysctl -n net.ipv4.tcp_available_congestion_control)
 CURRENT=$(sysctl -n net.ipv4.tcp_congestion_control)
 echo -e "${YELLOW}Available: $AVAILABLE${NC}"
@@ -257,7 +263,7 @@ else
     echo -e "${RED}UFW config not found, skipping${NC}"
 fi
 
-echo "${GREEN}IPv6 disabled${NC}"
+echo -e "${GREEN}IPv6 disabled${NC}"
 }
 ##RESET UFW AND IPTABLES##
 reset_ufw(){
@@ -278,51 +284,65 @@ setup_ufw() {
     ufw --force enable
 }
 ##IPTABLES##
-iptables_rules(){
-#DDOS
-iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
-iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
-iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
-    --hashlimit-name conn_443 \
-    --hashlimit-above 200/min \
-    --hashlimit-burst 300 \
-    --hashlimit-mode srcip \
-	--hashlimit-htable-expire 60000 \
-    -j DROP
-#SYN FLOOD
-iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
-iptables -A INPUT -p tcp --syn -m limit --limit 10/s --limit-burst 20 -j ACCEPT
-iptables -A INPUT -p tcp --syn -j DROP
-#PORT SCANNING
-iptables -A INPUT -m state --state INVALID -j DROP
-iptables -N PORT_SCAN
-iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
-iptables -A PORT_SCAN -j DROP
-iptables -A INPUT -j PORT_SCAN
-#ICMP (PING)
-iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
-iptables -A OUTPUT -p icmp --icmp-type echo-reply -j DROP
-#SPOOF
-iptables -A INPUT -s 0.0.0.0/8 -j DROP
-iptables -A INPUT -s 10.0.0.0/8 -j DROP
-iptables -A INPUT -s 100.64.0.0/10 -j DROP
-iptables -A INPUT -s 127.0.0.0/8 -j DROP
-iptables -A INPUT -s 169.254.0.0/16 -j DROP
-iptables -A INPUT -s 172.16.0.0/12 -j DROP
-iptables -A INPUT -s 192.0.0.0/24 -j DROP
-iptables -A INPUT -s 192.0.2.0/24 -j DROP
-iptables -A INPUT -s 192.88.99.0/24 -j DROP
-iptables -A INPUT -s 192.168.0.0/16 -j DROP
-iptables -A INPUT -s 198.18.0.0/15 -j DROP
-iptables -A INPUT -s 198.51.100.0/24 -j DROP
-iptables -A INPUT -s 203.0.113.0/24 -j DROP
-iptables -A INPUT -s 224.0.0.0/4 -j DROP
-iptables -A INPUT -s 255.255.255.255 -j DROP
-#ENABLE ESTABLISHED
-iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-iptables -A INPUT -i lo -j ACCEPT
-#SAVE RULES
-iptables-save > /etc/iptables/rules.v4
+iptables_rules() {
+    mkdir -p /etc/iptables
+
+    if ! dpkg -l | grep -q iptables-persistent; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent > /dev/null 2>&1
+        echo "${GREEN}IPtables-persistent installed${NC}"
+    fi
+
+    #DDOS
+    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
+    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
+    iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
+        --hashlimit-name conn_443 \
+        --hashlimit-above 200/min \
+        --hashlimit-burst 300 \
+        --hashlimit-mode srcip \
+        --hashlimit-htable-expire 60000 \
+        -j DROP
+
+    #SYN FLOOD
+    iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
+    iptables -A INPUT -p tcp --syn -m limit --limit 10/s --limit-burst 20 -j ACCEPT
+    iptables -A INPUT -p tcp --syn -j DROP
+
+    #PORT SCANNING
+    iptables -A INPUT -m state --state INVALID -j DROP
+    iptables -N PORT_SCAN
+    iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
+    iptables -A PORT_SCAN -j DROP
+    iptables -A INPUT -j PORT_SCAN
+
+    #ICMP (PING)
+    iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
+    iptables -A OUTPUT -p icmp --icmp-type echo-reply -j DROP
+
+    #SPOOF
+    iptables -A INPUT -s 0.0.0.0/8 -j DROP
+    iptables -A INPUT -s 10.0.0.0/8 -j DROP
+    iptables -A INPUT -s 100.64.0.0/10 -j DROP
+    iptables -A INPUT -s 127.0.0.0/8 -j DROP
+    iptables -A INPUT -s 169.254.0.0/16 -j DROP
+    iptables -A INPUT -s 172.16.0.0/12 -j DROP
+    iptables -A INPUT -s 192.0.0.0/24 -j DROP
+    iptables -A INPUT -s 192.0.2.0/24 -j DROP
+    iptables -A INPUT -s 192.88.99.0/24 -j DROP
+    iptables -A INPUT -s 192.168.0.0/16 -j DROP
+    iptables -A INPUT -s 198.18.0.0/15 -j DROP
+    iptables -A INPUT -s 198.51.100.0/24 -j DROP
+    iptables -A INPUT -s 203.0.113.0/24 -j DROP
+    iptables -A INPUT -s 224.0.0.0/4 -j DROP
+    iptables -A INPUT -s 255.255.255.255 -j DROP
+
+    #ENABLE ESTABLISHED
+    iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    iptables -A INPUT -i lo -j ACCEPT
+
+    #SAVE RULES
+    iptables-save > /etc/iptables/rules.v4
+    echo -e "${GREEN}IPtables rules saved${NC}"
 }
 ##FAIL2BAN
 fail2ban() {
