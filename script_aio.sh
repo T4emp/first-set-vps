@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.9
+##alpha0.2
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -388,7 +388,7 @@ clean_apt
 change_port
 #create_user
 #disable_root_login
-setup_pubkey_auth
+#setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
