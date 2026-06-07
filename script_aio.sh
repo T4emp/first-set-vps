@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.2
+##alpha0.1.3
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -152,6 +152,7 @@ setup_pubkey_auth() {
 
     systemctl restart ssh sshd
     echo -e "${GREEN}Activated auth with pub key${NC}"
+}
 ##BBR##
 enable_bbr() {
 AVAILABLE=$(sysctl -n net.ipv4.tcp_available_congestion_control)
