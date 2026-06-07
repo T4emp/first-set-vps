@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.1.4
+##alpha0.1.5
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -156,7 +156,6 @@ setup_pubkey_auth() {
 enable_bbr() {
 AVAILABLE=$(sysctl -n net.ipv4.tcp_available_congestion_control)
 CURRENT=$(sysctl -n net.ipv4.tcp_congestion_control)
-
 echo -e "${YELLOW}Available: $AVAILABLE${NC}"
 echo -e "${GREEN}Current:   $CURRENT${NC}"
 
@@ -167,14 +166,29 @@ elif echo "$AVAILABLE" | grep -qw "bbr2"; then
 elif echo "$AVAILABLE" | grep -qw "bbr"; then
     BEST_BBR="bbr"
 else
-    echo -e "${YELLOW}BBR is not available on this system${NC}"
-    exit 1
+    echo -e "${YELLOW}BBR not available, trying to load module...${NC}"
+    if modprobe tcp_bbr 2>/dev/null; then
+        AVAILABLE=$(sysctl -n net.ipv4.tcp_available_congestion_control)
+        if echo "$AVAILABLE" | grep -qw "bbr"; then
+            BEST_BBR="bbr"
+            echo -e "${GREEN}BBR module loaded successfully${NC}"
+        else
+            echo -e "${RED}BBR module loaded but still not available${NC}"
+            echo -e "${RED}Virtualization type: $(systemd-detect-virt)${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}Failed to load BBR module${NC}"
+        echo -e "${RED}Virtualization type: $(systemd-detect-virt)${NC}"
+        exit 1
+    fi
 fi
+
+echo "tcp_bbr" >> /etc/modules-load.d/modules.conf 2>/dev/null
 
 if [ "$CURRENT" = "$BEST_BBR" ]; then
     echo -e "${GREEN}BBR already set to best available version ($BEST_BBR), skipping${NC}"
 else
-    modprobe tcp_bbr 2>/dev/null
     sysctl -w net.ipv4.tcp_congestion_control="$BEST_BBR"
     echo -e "${GREEN}BBR activated: $BEST_BBR${NC}"
 fi
@@ -194,16 +208,12 @@ declare -A PARAMS=(
 
 for KEY in "${!PARAMS[@]}"; do
     VALUE="${PARAMS[$KEY]}"
-
     sed -i "/^${KEY}/d" "$SYSCTL_CFG"
-
     echo "${KEY}=${VALUE}" >> "$SYSCTL_CFG"
-
     sysctl -w "${KEY}=${VALUE}" > /dev/null 2>&1
 done
 
 sysctl -p "$SYSCTL_CFG" > /dev/null
-
 echo -e "${GREEN}All network parameters applied and saved${NC}"
 }
 ##IPV6##
