@@ -385,7 +385,7 @@ reboot_required
 update
 install_based
 clean_apt
-change_port
+#change_port
 create_user
 disable_root_login
 setup_pubkey_auth
