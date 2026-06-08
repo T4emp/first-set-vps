@@ -51,7 +51,7 @@ install_based(){
     echo -e "${GREEN}Installing apt...${NC}"
     apt-get install ufw -y
     apt-get install -yqq --no-install-recommends ca-certificates
-    apt-get install fail2ban -y
+    #apt-get install fail2ban -y
 	apt-get install nano -y
     reboot_required
     echo -e "${GREEN}Successful${NC}"
