@@ -310,7 +310,7 @@ iptables_rules() {
     iptables -N DOCKER-USER 2>/dev/null || true
     iptables -I DOCKER-USER -j RETURN
     #SPOOF
-    #iptables -A INPUT -s 0.0.0.0/8 -j DROP
+    iptables -A INPUT -s 0.0.0.0/8 -j DROP
     iptables -A INPUT -s 10.0.0.0/8 -j DROP
     iptables -A INPUT -s 100.64.0.0/10 -j DROP
     iptables -A INPUT -s 127.0.0.0/8 -j DROP
@@ -328,8 +328,8 @@ iptables_rules() {
     #WHITELIST IP
     iptables -A INPUT -s "$ALLOWED_IP" -p tcp --dport "$ALLOWED_PORT" -j ACCEPT
     #DDOS
-    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
-    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
+    #iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
+    iptables -A INPUT -p tcp --dport "$NEW_PORT" -j ACCEPT
     iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
         --hashlimit-name conn_443 \
         --hashlimit-above 200/min \
