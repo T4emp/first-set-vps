@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.2.2
+##pre-alpha0.2.2
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
