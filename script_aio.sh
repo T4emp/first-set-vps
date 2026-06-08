@@ -51,7 +51,7 @@ install_based(){
     echo -e "${GREEN}Installing apt...${NC}"
     apt-get install ufw -y
     apt-get install -yqq --no-install-recommends ca-certificates
-    apt-get install fail2ban -y
+    #apt-get install fail2ban -y
 	apt-get install nano -y
     reboot_required
     echo -e "${GREEN}Successful${NC}"
@@ -392,13 +392,13 @@ reboot_required
 update
 install_based
 clean_apt
-change_port
-create_user
-disable_root_login
-setup_pubkey_auth
+#change_port
+#create_user
+#disable_root_login
+#setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
-fail2ban
+#fail2ban
 setup_ufw
 iptables_rules
