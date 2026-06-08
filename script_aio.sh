@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.2.1
+##alpha0.2.2
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -292,32 +292,14 @@ iptables_rules() {
         echo -e "${GREEN}IPtables-persistent installed${NC}"
     fi
 
-    #DDOS
-    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
-    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
-    iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
-        --hashlimit-name conn_443 \
-        --hashlimit-above 200/min \
-        --hashlimit-burst 300 \
-        --hashlimit-mode srcip \
-        --hashlimit-htable-expire 60000 \
-        -j DROP
+    #DEFAULT
+    iptables -P INPUT DROP
+    iptables -P FORWARD DROP
+    iptables -P OUTPUT ACCEPT
 
-    #SYN FLOOD
-    iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
-    iptables -A INPUT -p tcp --syn -m limit --limit 10/s --limit-burst 20 -j ACCEPT
-    iptables -A INPUT -p tcp --syn -j DROP
-
-    #PORT SCANNING
-    iptables -A INPUT -m state --state INVALID -j DROP
-    iptables -N PORT_SCAN
-    iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
-    iptables -A PORT_SCAN -j DROP
-    iptables -A INPUT -j PORT_SCAN
-
-    #ICMP (PING)
-    iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
-    iptables -A OUTPUT -p icmp --icmp-type echo-reply -j DROP
+    #ENABLE ESTABLISHED
+    iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    iptables -A INPUT -i lo -j ACCEPT
 
     #SPOOF
     iptables -A INPUT -s 0.0.0.0/8 -j DROP
@@ -334,11 +316,29 @@ iptables_rules() {
     iptables -A INPUT -s 198.51.100.0/24 -j DROP
     iptables -A INPUT -s 203.0.113.0/24 -j DROP
     iptables -A INPUT -s 224.0.0.0/4 -j DROP
-    iptables -A INPUT -s 255.255.255.255/1 -j DROP
+    iptables -A INPUT -s 255.255.255.255 -j DROP
 
-    #ENABLE ESTABLISHED
-    iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-    iptables -A INPUT -i lo -j ACCEPT
+    #DDOS
+    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
+    iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
+    iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
+        --hashlimit-name conn_443 \
+        --hashlimit-above 200/min \
+        --hashlimit-burst 300 \
+        --hashlimit-mode srcip \
+        --hashlimit-htable-expire 60000 \
+        -j DROP
+    iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT
+
+    #PORT SCANNING
+    iptables -A INPUT -m state --state INVALID -j DROP
+    iptables -N PORT_SCAN
+    #ICMP (PING)
+    iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
+    #PORT SCANNING
+    iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
+    iptables -A PORT_SCAN -j DROP
+    iptables -A INPUT -j PORT_SCAN
 
     #SAVE RULES
     iptables-save > /etc/iptables/rules.v4
@@ -385,10 +385,10 @@ reboot_required
 update
 install_based
 clean_apt
-#change_port
-#create_user
-#disable_root_login
-#setup_pubkey_auth
+change_port
+create_user
+disable_root_login
+setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
