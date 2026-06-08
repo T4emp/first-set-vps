@@ -1,5 +1,5 @@
 #!/bin/bash
-##pre-alpha0.2.3
+##pre-alpha0.2.4
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -328,7 +328,6 @@ iptables_rules() {
     #WHITELIST IP
     iptables -A INPUT -s "$ALLOWED_IP" -p tcp --dport "$ALLOWED_PORT" -j ACCEPT
     #DDOS
-    #iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
     iptables -A INPUT -p tcp --dport "$NEW_PORT" -j ACCEPT
     iptables -A INPUT -p tcp --dport 443 -m state --state NEW -m hashlimit \
         --hashlimit-name conn_443 \
@@ -392,13 +391,13 @@ reboot_required
 update
 install_based
 clean_apt
-#change_port
-#create_user
-#disable_root_login
-#setup_pubkey_auth
+change_port
+create_user
+disable_root_login
+setup_pubkey_auth
 enable_bbr
 disable_ipv6_ufw
 reset_ufw
-#fail2ban
+fail2ban
 setup_ufw
 iptables_rules
