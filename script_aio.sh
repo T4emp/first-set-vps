@@ -1,5 +1,5 @@
 #!/bin/bash
-##pre-alpha0.2.2
+##pre-alpha0.2.3
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -277,7 +277,7 @@ iptables -P INPUT ACCEPT && iptables -P FORWARD ACCEPT && iptables -P OUTPUT ACC
 setup_ufw() {
     ufw allow "$NEW_PORT"/tcp
     ufw allow https
-    ufw allow from "$UFW_IP" to any port 3000 proto tcp
+    ufw allow from "$ALLOWED_IP" to any port "$ALLOWED_PORT" proto tcp
 
     echo -e "${GREEN}UFW rules added${NC}"
 
@@ -286,21 +286,29 @@ setup_ufw() {
 ##IPTABLES##
 iptables_rules() {
     mkdir -p /etc/iptables
-
     if ! dpkg -l | grep -q iptables-persistent; then
         DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent > /dev/null 2>&1
         echo -e "${GREEN}IPtables-persistent installed${NC}"
     fi
-
+    #FLUSH
+    iptables -F INPUT
+    iptables -F OUTPUT
+    iptables -F FORWARD
+    iptables -t nat -F PREROUTING
+    iptables -t nat -F OUTPUT
     #DEFAULT
     iptables -P INPUT DROP
     iptables -P FORWARD DROP
     iptables -P OUTPUT ACCEPT
-
     #ENABLE ESTABLISHED
     iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
     iptables -A INPUT -i lo -j ACCEPT
-
+    #DOCKER
+    iptables -A INPUT -i docker0 -j ACCEPT
+    iptables -A FORWARD -i docker0 -o eth0 -j ACCEPT
+    iptables -A FORWARD -i eth0 -o docker0 -m state --state ESTABLISHED,RELATED -j ACCEPT
+    iptables -N DOCKER-USER 2>/dev/null || true
+    iptables -I DOCKER-USER -j RETURN
     #SPOOF
     iptables -A INPUT -s 0.0.0.0/8 -j DROP
     iptables -A INPUT -s 10.0.0.0/8 -j DROP
@@ -317,7 +325,8 @@ iptables_rules() {
     iptables -A INPUT -s 203.0.113.0/24 -j DROP
     iptables -A INPUT -s 224.0.0.0/4 -j DROP
     iptables -A INPUT -s 255.255.255.255 -j DROP
-
+    #WHITELIST IP
+    iptables -A INPUT -s "$ALLOWED_IP" -p tcp --dport "$ALLOWED_PORT" -j ACCEPT
     #DDOS
     iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -m limit --limit 5/min --limit-burst 10 -j ACCEPT
     iptables -A INPUT -p tcp --dport "$NEW_PORT" -m state --state NEW -j DROP
@@ -329,17 +338,15 @@ iptables_rules() {
         --hashlimit-htable-expire 60000 \
         -j DROP
     iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT
-
     #PORT SCANNING
     iptables -A INPUT -m state --state INVALID -j DROP
-    iptables -N PORT_SCAN
+    iptables -N PORT_SCAN 2>/dev/null || true
     #ICMP (PING)
     iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
     #PORT SCANNING
     iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
     iptables -A PORT_SCAN -j DROP
     iptables -A INPUT -j PORT_SCAN
-
     #SAVE RULES
     iptables-save > /etc/iptables/rules.v4
     echo -e "${GREEN}IPtables rules saved${NC}"
