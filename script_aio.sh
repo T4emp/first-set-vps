@@ -69,7 +69,7 @@ change_port() {
 if grep -qE "^#Port " "$SSHD_CONFIG"; then
     sed -i "s/^#Port .*/Port $NEW_PORT/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Port uncommented and set to $NEW_PORT${NC}"
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
 
 elif grep -qE "^Port " "$SSHD_CONFIG"; then
     CURRENT_PORT=$(grep -E "^Port " "$SSHD_CONFIG" | awk '{print $2}')
@@ -78,13 +78,13 @@ elif grep -qE "^Port " "$SSHD_CONFIG"; then
     else
         sed -i "s/^Port .*/Port $NEW_PORT/" "$SSHD_CONFIG"
         echo -e "${GREEN}Port changed from $CURRENT_PORT to $NEW_PORT${NC}"
-        systemctl restart ssh && systemctl restart sshd
+        systemctl restart sshd
     fi
 
 else
     echo "Port $NEW_PORT" >> "$SSHD_CONFIG"
     echo -e "${GREEN}Port $NEW_PORT added to $SSHD_CONFIG${NC}"
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
 fi
 }
 ##CREATE NEW USER AND ADD TO SUDO##
@@ -107,17 +107,17 @@ if grep -qE "^PermitRootLogin no" "$SSHD_CONFIG"; then
 elif grep -qE "^#PermitRootLogin" "$SSHD_CONFIG"; then
     sed -i "s/^#PermitRootLogin.*/PermitRootLogin no/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
 
 elif grep -qE "^PermitRootLogin" "$SSHD_CONFIG"; then
     sed -i "s/^PermitRootLogin.*/PermitRootLogin no/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
 
 else
     echo "PermitRootLogin no" >> "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
 fi
 }
 ##CREATE PUB KEY AND ACTIVATE##
@@ -150,7 +150,7 @@ setup_pubkey_auth() {
     fi
     echo -e "${GREEN}PubkeyAuthentication set to yes${NC}"
 
-    systemctl restart ssh && systemctl restart sshd
+    systemctl restart sshd
     echo -e "${GREEN}Activated auth with pub key${NC}"
 }
 ##BBR##
@@ -310,7 +310,7 @@ iptables_rules() {
     iptables -N DOCKER-USER 2>/dev/null || true
     iptables -I DOCKER-USER -j RETURN
     #SPOOF
-    #iptables -A INPUT -s 0.0.0.0/8 -j DROP
+    iptables -A INPUT -s 0.0.0.0/8 -j DROP
     iptables -A INPUT -s 10.0.0.0/8 -j DROP
     iptables -A INPUT -s 100.64.0.0/10 -j DROP
     iptables -A INPUT -s 127.0.0.0/8 -j DROP
