@@ -69,7 +69,7 @@ change_port() {
 if grep -qE "^#Port " "$SSHD_CONFIG"; then
     sed -i "s/^#Port .*/Port $NEW_PORT/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Port uncommented and set to $NEW_PORT${NC}"
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
 
 elif grep -qE "^Port " "$SSHD_CONFIG"; then
     CURRENT_PORT=$(grep -E "^Port " "$SSHD_CONFIG" | awk '{print $2}')
@@ -78,13 +78,13 @@ elif grep -qE "^Port " "$SSHD_CONFIG"; then
     else
         sed -i "s/^Port .*/Port $NEW_PORT/" "$SSHD_CONFIG"
         echo -e "${GREEN}Port changed from $CURRENT_PORT to $NEW_PORT${NC}"
-        systemctl restart ssh sshd
+        systemctl restart ssh && systemctl restart sshd
     fi
 
 else
     echo "Port $NEW_PORT" >> "$SSHD_CONFIG"
     echo -e "${GREEN}Port $NEW_PORT added to $SSHD_CONFIG${NC}"
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
 fi
 }
 ##CREATE NEW USER AND ADD TO SUDO##
@@ -107,17 +107,17 @@ if grep -qE "^PermitRootLogin no" "$SSHD_CONFIG"; then
 elif grep -qE "^#PermitRootLogin" "$SSHD_CONFIG"; then
     sed -i "s/^#PermitRootLogin.*/PermitRootLogin no/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
 
 elif grep -qE "^PermitRootLogin" "$SSHD_CONFIG"; then
     sed -i "s/^PermitRootLogin.*/PermitRootLogin no/" "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
 
 else
     echo "PermitRootLogin no" >> "$SSHD_CONFIG"
     echo -e "${YELLOW}Root login disabled${NC}"
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
 fi
 }
 ##CREATE PUB KEY AND ACTIVATE##
@@ -150,7 +150,7 @@ setup_pubkey_auth() {
     fi
     echo -e "${GREEN}PubkeyAuthentication set to yes${NC}"
 
-    systemctl restart ssh sshd
+    systemctl restart ssh && systemctl restart sshd
     echo -e "${GREEN}Activated auth with pub key${NC}"
 }
 ##BBR##
@@ -400,4 +400,4 @@ disable_ipv6_ufw
 reset_ufw
 fail2ban
 setup_ufw
-#iptables_rules
+iptables_rules
