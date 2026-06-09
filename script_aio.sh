@@ -322,11 +322,6 @@ iptables_rules() {
     iptables -A INPUT -s 203.0.113.0/24 -j DROP
     iptables -A INPUT -s 224.0.0.0/4 -j DROP
     iptables -A INPUT -s 255.255.255.255 -j DROP
-    #PORT SCAN
-    iptables -N PORT_SCAN 2>/dev/null || true
-    iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
-    iptables -A PORT_SCAN -j DROP
-    iptables -A INPUT -j PORT_SCAN
     #ICMP (PING)
     iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
     #WHITELIST IP
@@ -342,6 +337,11 @@ iptables_rules() {
         --hashlimit-htable-expire 60000 \
         -j DROP
     iptables -A INPUT -p tcp --dport 443 -m state --state NEW -j ACCEPT
+	#PORT SCAN
+    iptables -N PORT_SCAN 2>/dev/null || true
+    iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
+    iptables -A PORT_SCAN -j DROP
+    iptables -A INPUT -j PORT_SCAN
     #SAVE RULES
     iptables-save > /etc/iptables/rules.v4
     echo -e "${GREEN}IPtables rules saved${NC}"
