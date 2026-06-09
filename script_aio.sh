@@ -358,7 +358,7 @@ enabled = true
 port = $NEW_PORT
 filter = sshd
 logpath = /var/log/auth.log
-maxretry = 3
+maxretry = 10
 bantime = 86400
 findtime = 600
 EOF
