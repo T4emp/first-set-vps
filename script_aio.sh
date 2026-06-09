@@ -382,8 +382,10 @@ else
 fi
 }
 ##RESTART SSHD
-restart_sshd(){
+restart_ssh(){
     systemctl restart sshd
+	systemctl restart sshd
+	echo -e "${GREEN}SSh has been restarted${NC}"
 }
 ##MAIN SCRIPT##
 enable_root
@@ -401,4 +403,4 @@ reset_ufw
 fail2ban
 setup_ufw
 iptables_rules
-restart_sshd
+restart_ssh
