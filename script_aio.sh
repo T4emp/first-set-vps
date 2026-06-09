@@ -1,5 +1,5 @@
 #!/bin/bash
-##pre-alpha0.2.4
+##pre-alpha0.2.5
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -310,7 +310,7 @@ iptables_rules() {
     iptables -N DOCKER-USER 2>/dev/null || true
     iptables -I DOCKER-USER -j RETURN
     #SPOOF
-    #iptables -A INPUT -s 0.0.0.0/8 -j DROP
+    iptables -A INPUT -s 0.0.0.0/8 -j DROP
     iptables -A INPUT -s 10.0.0.0/8 -j DROP
     iptables -A INPUT -s 100.64.0.0/10 -j DROP
     iptables -A INPUT -s 127.0.0.0/8 -j DROP
