@@ -400,4 +400,4 @@ disable_ipv6_ufw
 reset_ufw
 fail2ban
 setup_ufw
-iptables_rules
+#iptables_rules
