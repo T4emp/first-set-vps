@@ -1,5 +1,5 @@
 #!/bin/bash
-##alpha0.3
+##beta0.4
 ##VARIABLE
 REBOOT_REQUIRED="/var/run/reboot-required"
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -269,7 +269,7 @@ iptables -P INPUT ACCEPT && iptables -P FORWARD ACCEPT && iptables -P OUTPUT ACC
 ##UFW##
 setup_ufw() {
     ufw allow "$NEW_PORT"/tcp
-    ufw allow https
+    ufw allow 443
     ufw allow from "$ALLOWED_IP" to any port "$ALLOWED_PORT" proto tcp
 
     echo -e "${GREEN}UFW rules added${NC}"
@@ -385,6 +385,8 @@ fi
 restart_ssh(){
     systemctl restart sshd
 	systemctl restart sshd
+	systemctl status ssh
+   systemctl status sshd
 	echo -e "${GREEN}SSh has been restarted${NC}"
 }
 ##MAIN SCRIPT##
