@@ -20,21 +20,7 @@ fi
 reboot_required() {
     if [ -f "$REBOOT_REQUIRED" ]; then
         echo -e "${RED}*** System restart required ***${NC}"
-        read -rp "$(echo -e "${GREEN}Reboot now? (y/n):${NC}")" ANSWER
-        case "$ANSWER" in
-            [yY]*)
-                echo -e "${GREEN}Rebooting...${NC}"
-                reboot
-                exit 0
-                ;;
-            [nN]*)
-                return 0
-                ;;
-            *)
-                echo -e "${YELLOW}Invalid input${NC}"
-                reboot_required
-                ;;
-        esac
+		reboot
     fi
 }
 ##UPDATE##
