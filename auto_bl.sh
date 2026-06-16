@@ -9,7 +9,6 @@ RED="\e[31m"
 YELLOW="\e[33m"
 NC="\e[0m"
 GRUB_CONF="/etc/default/grub"
-USERNAME="root"
 ##SUDO\ROOT##
 enable_root(){
 if [ "$EUID" -ne 0 ]; then
@@ -64,7 +63,11 @@ clean_apt(){
 }
 ##CREATE PUB KEY AND ACTIVATE##
 setup_pubkey_auth() {
-    SSH_DIR="/home/$USERNAME/.ssh"
+	if [ "$USERNAME" = "root" ]; then
+    	SSH_DIR="/root/.ssh"
+	else
+    	SSH_DIR="/home/$USERNAME/.ssh"
+	fi
     AUTH_KEYS_FILE="$SSH_DIR/authorized_keys"
 
     mkdir -p "$SSH_DIR"
