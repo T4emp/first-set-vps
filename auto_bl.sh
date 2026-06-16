@@ -288,8 +288,8 @@ fi
 restart_ssh(){
   systemctl restart sshd
 	systemctl restart sshd
-	systemctl status ssh
-  systemctl status sshd
+	systemctl status ssh --no-pager
+  systemctl status sshd --no-pager
 	echo -e "${GREEN}SSh has been restarted${NC}"
 }
 ##MAIN SCRIPT##
