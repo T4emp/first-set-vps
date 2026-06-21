@@ -491,8 +491,9 @@ domain_check() {
     echo "IP домена ($DOMAIN): $DOMAIN_IP"
     if [ "$VPS_IP" != "$DOMAIN_IP" ]; then
       echo "⚠ Домен не совпадает с нодой"
-      domain_check
-      return
+      read -rp "Повторить попытку? (y/n): " RETRY
+      [ "$RETRY" = "y" ] && domain_check
+      return 1
     fi
   fi
   echo "✓ Домен: $DOMAIN → $VPS_IP"
