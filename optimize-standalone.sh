@@ -26,6 +26,7 @@ echo "✓ Перезагрузка не требуется"
 echo "▶ Установка зависимостей..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true
+apt-get upgrade -y -qq || true
 apt-get install -y ca-certificates curl irqbalance ethtool >/dev/null 2>&1 || true
 apt-get install -y fail2ban nano dnsutils >/dev/null 2>&1 || true
 echo "✓ Зависимости"
@@ -40,7 +41,7 @@ echo "✓ Перезагрузка не требуется"
 
 # ─── 1.2. Очистка ───
 echo "▶ Очистка временных файлов..."
-apt autoremove || true
+apt autoremove -y || true
 apt clean
 echo "✓ Временные файлы очищены"
 
@@ -547,6 +548,34 @@ DOCKER
 docker compose -f "/opt/caddy/docker-compose.yml" down
 docker compose -f "/opt/remnanode/docker-compose.yml" up -d
 echo "✓ docker-compose RN правлен"
+
+# ─── 8.8 apt update ───
+echo "▶ Добавление авто-обновление apt..."
+[ -f /opt/custom_script/apt_update.sh ] && cp /opt/custom_script/apt_update.sh "$BACKUP/" 2>/dev/null || true
+cat > "/opt/custom_script/apt_update.sh" <<'APT'
+#!/usr/bin/env bash
+set -euo pipefail
+# Обновление apt
+echo "▶ Обновление apt..."
+apt-get update -qq || true
+apt-get upgrade -y -qq || true
+# Очистка
+echo "▶ Очистка временных файлов..."
+apt autoremove -y || true
+apt clean
+echo "✓ Временные файлы очищены"
+# Перезагрузка
+echo "▶ Проверка перезагрузки..."
+if [ -f "/var/run/reboot-required" ]; then
+  echo "*** System restart required ***"
+  reboot
+fi
+echo "✓ Перезагрузка не требуется"
+APT
+
+chmod +x "/opt/custom_script/apt_update.sh"
+(crontab -l 2>/dev/null | grep -v apt_update; echo "0 5 * * 7 /opt/custom_script/apt_update.sh >> /var/log/apt_update.log 2>&1") | crontab -
+echo "✓ Авто-обновление добавлено"
 
 # ─── 9. irqbalance ───
 systemctl enable --now irqbalance >/dev/null 2>&1 || true
