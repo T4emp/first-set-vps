@@ -5,6 +5,7 @@
 # ЗАПУСКАТЬ ОТ ROOT, на BACKEND-сервере (Remnawave-нода), НЕ на HAProxy-входе.
 # Перед применением экспортируй необходимые переменные:
 # export SSH_PORT - порт SSH, PUB_KEY - публичный ключ, ALLOWED_IP - ip RW, ALLOWED_PORT - порт RW
+# Для белой ноды export EXTRA_PORTS="555,667"
 # Обязательно иметь привязанный домен для ноды
 
 set -euo pipefail
@@ -380,6 +381,24 @@ iptables -A INPUT -p udp \
   -m connlimit --connlimit-above 200 \
   --connlimit-mask 32 \
   -j DROP
+# Дополнительный порты
+add_ports() {
+  local VAR_NAME=$1
+  local VAR_VALUE=${!VAR_NAME:-}
+
+  if [ -z "$VAR_VALUE" ]; then
+    echo "⚠ $VAR_NAME не задан, пропуск..."
+    return
+  fi
+
+  IFS=',' read -ra PORTS <<< "$VAR_VALUE"
+  for PORT in "${PORTS[@]}"; do
+    PORT=$(echo "$PORT" | tr -d ' ')
+    iptables -A INPUT -p tcp --dport "$PORT" -j ACCEPT
+    iptables -A INPUT -p udp --dport "$PORT" -j ACCEPT
+  done
+}
+add_ports "EXTRA_PORTS"
 # Доступ к сервисам
 iptables -A INPUT -p tcp --dport $SSH_PORT -j ACCEPT                      # SSH
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT                            # HTTPS
