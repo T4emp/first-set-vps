@@ -1408,7 +1408,7 @@ install_command() {
     configure_selfsteal_integration
     
     up_remnanode
-    follow_remnanode_logs
+    # follow_remnanode_logs
 
     # final message
     clear
