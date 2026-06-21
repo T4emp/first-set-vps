@@ -501,7 +501,7 @@ RENEW
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d
 chmod +x "/opt/custom_script/renew.sh"
-(crontab -l 2>/dev/null | grep -v certbot || true; echo "0 3 1 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
+(crontab -l 2>/dev/null | grep -v "/opt/custom_script/renew.sh" || true; echo "0 3 1 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
 echo "✓ CertBot настроен"
 
 # ─── 8.6 GEO-файлы ───
@@ -520,7 +520,7 @@ echo "✓ GEO-файлы обновлены"
 GEO
 
 chmod +x "/opt/custom_script/geofiles.sh"
-(crontab -l 2>/dev/null | grep -v geofiles || true; echo "0 3 * * 7 /opt/custom_script/geofiles.sh >> /var/log/geofiles.log 2>&1") | crontab -
+(crontab -l 2>/dev/null | grep -v "/opt/custom_script/geofiles.sh" || true; echo "0 3 * * 7 /opt/custom_script/geofiles.sh >> /var/log/geofiles.log 2>&1") | crontab -
 echo "✓ GEO-файлы настроены"
 
 # ─── 8.7 Compose RN ───
@@ -582,7 +582,7 @@ echo "✓ Перезагрузка не требуется"
 APT
 
 chmod +x "/opt/custom_script/apt_update.sh"
-(crontab -l 2>/dev/null | grep -v apt_update || true; echo "0 5 * * 7 /opt/custom_script/apt_update.sh >> /var/log/apt_update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null | grep -v "/opt/custom_script/apt_update.sh" || true; echo "0 5 * * 7 /opt/custom_script/apt_update.sh >> /var/log/apt_update.log 2>&1") | crontab -
 echo "✓ Авто-обновление добавлено"
 
 # ─── 9. irqbalance ───
