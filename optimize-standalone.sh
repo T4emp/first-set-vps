@@ -3,11 +3,11 @@
 # Тюнит sysctl (BBR, conntrack 2M, буферы, fd), лимиты, swap, journald, THP, NIC, irqbalance.
 # Идемпотентен. Бэкап старых конфигов в /root/optimize-backup-<ts>.
 # ЗАПУСКАТЬ ОТ ROOT, на BACKEND-сервере (Remnawave-нода), НЕ на HAProxy-входе.
+# Обязательно иметь привязанный домен для ноды
 # Перед применением экспортируй необходимые переменные:
 # export SSH_PORT - порт SSH, PUB_KEY - публичный ключ, ALLOWED_IP - ip RW, ALLOWED_PORT - порт RW
-# Для белой ноды export EXTRA_PORTS="555,667"
-# Если указан export BEARER="token API", домен автоматически берется с cf
-# Обязательно иметь привязанный домен для ноды
+# Для белой ноды EXTRA_PORTS="555,667"
+# Если указан BEARER="token API", домен автоматически берется с cf
 
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "❌ Запусти от root (sudo bash optimize-standalone.sh)"; exit 1; }
@@ -483,6 +483,7 @@ domain_check() {
     fi
     echo "✓ Домен найден: $DOMAIN"
     declare -g DOMAIN
+    export DOMAIN_OPT
   else
     echo "⚠ Токен CF не найден, ручная проверка..."
     read -rp "Введите домен ноды: " DOMAIN
@@ -525,6 +526,7 @@ docker run --rm \
 [ -f /opt/custom_script/renew.sh ] && cp /opt/custom_script/renew.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/renew.sh" <<'RENEW'
 #!/usr/bin/env bash
+# v1.0
 set -euo pipefail
 # Остановка контейнеров
 echo "▶ Остановка контейнеров..."
@@ -553,6 +555,7 @@ wget -O /var/lib/remnanode/runetfreedomsite.dat https://raw.githubusercontent.co
 [ -f /opt/custom_script/geofiles.sh ] && cp /opt/custom_script/geofiles.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/geofiles.sh" <<'GEO'
 #!/usr/bin/env bash
+# v1.0
 set -euo pipefail
 # Обновление GEO-файлов
 echo "▶ Обновление GEO-файлов..."
@@ -585,14 +588,14 @@ services:
         soft: 1048576
         hard: 1048576
     volumes:
-      - /var/lib/remnanode/xray:/usr/local/bin/xray
-      - /var/lib/remnanode/geoip.dat:/usr/local/share/xray/geoip.dat
-      - /var/lib/remnanode/geosite.dat:/usr/local/share/xray/geosite.dat
-      - /var/lib/remnanode/runetfreedomip.dat:/usr/local/share/xray/runetfreedomip.dat
-      - /var/lib/remnanode/runetfreedomsite.dat:/usr/local/share/xray/runetfreedomsite.dat
-      # - /var/log/remnanode:/var/log/remnanode
-      - /dev/shm:/dev/shm  # Uncomment for selfsteal socket access
-      - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl
+      - /var/lib/remnanode/xray:/usr/local/bin/xray                                           # Движок xray
+      - /var/lib/remnanode/geoip.dat:/usr/local/share/xray/geoip.dat                          # Стандартный geoip
+      - /var/lib/remnanode/geosite.dat:/usr/local/share/xray/geosite.dat                      # Стандартный geosite
+      - /var/lib/remnanode/runetfreedomip.dat:/usr/local/share/xray/runetfreedomip.dat        # Дополнительный geoip
+      - /var/lib/remnanode/runetfreedomsite.dat:/usr/local/share/xray/runetfreedomsite.dat    # Дополнительный geosite
+      # - /var/log/remnanode:/var/log/remnanode                                               # Логи контейнер -> нода
+      - /dev/shm:/dev/shm                                                                     # RN socket
+      - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl                   # SSL сертификаты
 DOCKER
 
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
@@ -604,6 +607,7 @@ echo "▶ Добавление авто-обновление apt..."
 [ -f /opt/custom_script/apt_update.sh ] && cp /opt/custom_script/apt_update.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/apt_update.sh" <<'APT'
 #!/usr/bin/env bash
+# v1.0
 set -euo pipefail
 # Обновление apt
 echo "▶ Обновление apt..."
