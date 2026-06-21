@@ -187,15 +187,19 @@ echo "✓ Лимиты подняты"
 
 # ─── 4. Swap ───
 echo "▶ Swap..."
-if [ ! -f /swapfile ] && ! swapon --show | grep -q .; then
-  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+SWAP_SIZE_MB=2048
+CURRENT_SWAP=$(swapon --show=SIZE,NAME --noheadings 2>/dev/null | awk '/swapfile/{gsub(/G/,"*1024"); gsub(/M/,"*1"); print int($1)}')
+if [ -z "$CURRENT_SWAP" ] || [ "$CURRENT_SWAP" -lt "$SWAP_SIZE_MB" ]; then
+  swapoff /swapfile 2>/dev/null || true
+  rm -f /swapfile
+  fallocate -l ${SWAP_SIZE_MB}M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=$SWAP_SIZE_MB
   chmod 600 /swapfile
   mkswap /swapfile >/dev/null
   swapon /swapfile
   grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
-  echo "✓ Создан /swapfile 2G"
+  echo "✓ Создан /swapfile ${SWAP_SIZE_MB}M"
 else
-  echo "✓ Swap уже есть"
+  echo "✓ Swap уже есть (${CURRENT_SWAP}MB >= ${SWAP_SIZE_MB}MB)"
 fi
 
 # ─── 5. journald ───
@@ -576,6 +580,7 @@ echo "▶ Проверка перезагрузки..."
 if [ -f "/var/run/reboot-required" ]; then
   echo "*** System restart required ***"
   reboot
+  exit 1
 fi
 echo "✓ Перезагрузка не требуется"
 APT
