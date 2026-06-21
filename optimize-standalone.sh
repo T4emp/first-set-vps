@@ -328,20 +328,22 @@ iptables -A INPUT -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
 # FIN + RST
 iptables -A INPUT -p tcp --tcp-flags FIN,RST FIN,RST -j DROP
 # Приватные ip
-iptables -A INPUT -s 0.0.0.0/8 -j DROP                    # "This" network
-iptables -A INPUT -s 10.0.0.0/8 -j DROP                   # RFC 1918 private
-iptables -A INPUT -s 100.64.0.0/10 -j DROP                # Carrier-grade NAT
-iptables -A INPUT -s 127.0.0.0/8 -j DROP                  # Loopback
-iptables -A INPUT -s 169.254.0.0/16 -j DROP               # Link-local
-iptables -A INPUT -s 172.16.0.0/12 ! -i docker0 -j DROP   # RFC 1918 private
-iptables -A INPUT -s 192.0.0.0/24 -j DROP                 # IETF protocol
-iptables -A INPUT -s 192.0.2.0/24 -j DROP                 # TEST-NET-1
-iptables -A INPUT -s 192.168.0.0/16 ! -i docker0 -j DROP  # RFC 1918 private
-iptables -A INPUT -s 198.18.0.0/15 -j DROP                # Benchmark testing
-iptables -A INPUT -s 198.51.100.0/24 -j DROP              # TEST-NET-2
-iptables -A INPUT -s 203.0.113.0/24 -j DROP               # TEST-NET-3
-iptables -A INPUT -s 224.0.0.0/4 -j DROP                  # Multicast
-iptables -A INPUT -s 240.0.0.0/4 -j DROP                  # Reserved
+iptables -A INPUT -i $IFACE -s 0.0.0.0/8 -j DROP                    # "This" network
+iptables -A INPUT -i $IFACE -s 10.0.0.0/8 -j DROP                   # RFC 1918 private
+iptables -A INPUT -i $IFACE -s 100.64.0.0/10 -j DROP                # Carrier-grade NAT
+iptables -A INPUT -i $IFACE -s 127.0.0.0/8 -j DROP                  # Loopback
+iptables -A INPUT -i $IFACE -s 169.254.0.0/16 -j DROP               # Link-local
+iptables -A INPUT -s 172.16.0.0/12 -i docker0 -j ACCEPT             # Docker
+iptables -A INPUT -i $IFACE -s 172.16.0.0/12 -j DROP                # RFC 1918 private
+iptables -A INPUT -i $IFACE -s 192.0.0.0/24 -j DROP                 # IETF protocol
+iptables -A INPUT -i $IFACE -s 192.0.2.0/24 -j DROP                 # TEST-NET-1
+iptables -A INPUT -s 192.168.0.0/16 -i docker0 -j ACCEPT            # Docker
+iptables -A INPUT -i $IFACE -s 192.168.0.0/16 -j DROP               # RFC 1918 private
+iptables -A INPUT -i $IFACE -s 198.18.0.0/15 -j DROP                # Benchmark testing
+iptables -A INPUT -i $IFACE -s 198.51.100.0/24 -j DROP              # TEST-NET-2
+iptables -A INPUT -i $IFACE -s 203.0.113.0/24 -j DROP               # TEST-NET-3
+iptables -A INPUT -i $IFACE -s 224.0.0.0/4 -j DROP                  # Multicast
+iptables -A INPUT -i $IFACE -s 240.0.0.0/4 -j DROP                  # Reserved
 # SYN флуд
 iptables -A INPUT -p tcp --syn \
   -m hashlimit --hashlimit-above 25/sec \
