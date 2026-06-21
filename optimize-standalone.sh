@@ -501,7 +501,7 @@ RENEW
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d
 chmod +x "/opt/custom_script/renew.sh"
-(crontab -l 2>/dev/null | grep -v certbot; echo "0 3 28 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
+(crontab -l 2>/dev/null | grep -v certbot; echo "0 3 1 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
 echo "✓ CertBot настроен"
 
 # ─── 8.6 GEO-файлы ───
