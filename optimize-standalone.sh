@@ -549,7 +549,7 @@ services:
       - /var/lib/remnanode/runetfreedomsite.dat:/usr/local/share/xray/runetfreedomsite.dat
       # - /var/log/remnanode:/var/log/remnanode
       - /dev/shm:/dev/shm  # Uncomment for selfsteal socket access
-      - /opt/certbot/certs/:/var/lib/remnanode/configs/xray/ssl
+      - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl
 DOCKER
 
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
