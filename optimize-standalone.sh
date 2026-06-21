@@ -70,7 +70,7 @@ net.ipv4.tcp_fin_timeout          = 15
 net.ipv4.tcp_keepalive_time       = 300
 net.ipv4.tcp_keepalive_intvl      = 30
 net.ipv4.tcp_keepalive_probes     = 5
-net.ipv4.tcp_max_syn_backlog      = 65535
+net.ipv4.tcp_max_syn_backlog      = 4096
 net.ipv4.tcp_max_tw_buckets       = 2000000
 net.ipv4.tcp_mtu_probing          = 1
 net.ipv4.tcp_no_metrics_save      = 1
@@ -355,10 +355,6 @@ iptables -A INPUT -p tcp --syn \
   --hashlimit-name syn_flood \
   --hashlimit-htable-expire 30000 \
   -j DROP
-# Включение SYN cookies
-sysctl -w net.ipv4.tcp_syncookies=1
-sysctl -w net.ipv4.tcp_max_syn_backlog=4096
-sysctl -w net.ipv4.tcp_synack_retries=2
 # UDP флуд
 iptables -A INPUT -p udp \
   -m hashlimit --hashlimit-above 50/sec \
