@@ -489,8 +489,7 @@ docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compo
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down
 # Перевыпуск
 echo "▶ Перевыпуск сертификата..."
-cd /opt/certbot
-docker compose run --rm certbot renew
+docker compose --project-directory /opt/certbot -f /opt/certbot/docker-compose.yml run --rm certbot renew
 # Запуск контейнеры
 echo "▶ Запуск контейнеров..."
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
