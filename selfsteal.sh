@@ -18,7 +18,7 @@ if [ $# -gt 0 ] && [ "$1" = "@" ]; then
 fi
 
 # Debug mode - set via --debug flag
-DEBUG_MODE=false
+DEBUG_MODE=true
 SCRIPT_URL="https://raw.githubusercontent.com/dignezzz/remnawave-scripts/main/selfsteal.sh"
 UPDATE_URL="$SCRIPT_URL"
 
