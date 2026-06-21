@@ -19,6 +19,7 @@ echo "▶ Проверка перезагрузки..."
 if [ -f "/var/run/reboot-required" ]; then
   echo "*** System restart required ***"
   reboot
+  exit 1
 fi
 echo "✓ Перезагрузка не требуется"
 
@@ -36,6 +37,7 @@ echo "▶ Проверка перезагрузки..."
 if [ -f "/var/run/reboot-required" ]; then
   echo "*** System restart required ***"
   reboot
+  exit 1
 fi
 echo "✓ Перезагрузка не требуется"
 
