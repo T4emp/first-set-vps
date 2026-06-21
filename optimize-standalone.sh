@@ -456,6 +456,8 @@ if [ "$VPS_IP" != "$DOMAIN_IP" ]; then
 fi
 }
 domain_check
+docker compose -f "/opt/remnanode/docker-compose.yml" down
+docker compose -f "/opt/caddy/docker-compose.yml" down
 [ -f /opt/certbot/docker-compose.yml ] && cp /opt/certbot/docker-compose.yml "$BACKUP/" 2>/dev/null || true
 mkdir -p /opt/certbot/certs /opt/certbot/var-lib-letsencrypt /opt/custom_script
 cat > /opt/certbot/docker-compose.yml <<CERT
@@ -496,6 +498,8 @@ docker compose -f "/opt/caddy/docker-compose.yml" up -d
 echo "✓ Сертификат перевыпущен, контейнеры запущены"
 RENEW
 
+docker compose -f "/opt/remnanode/docker-compose.yml" up -d
+docker compose -f "/opt/caddy/docker-compose.yml" up -d
 chmod +x "/opt/custom_script/renew.sh"
 (crontab -l 2>/dev/null | grep -v certbot; echo "0 3 28 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
 echo "✓ CertBot настроен"
