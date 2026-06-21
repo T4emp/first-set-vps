@@ -383,20 +383,18 @@ iptables -A INPUT -p udp \
   -j DROP
 # Дополнительный порты
 add_ports() {
-  local VAR_NAME=$1
-  local VAR_VALUE=${!VAR_NAME:-}
-
-  if [ -z "$VAR_VALUE" ]; then
-    echo "⚠ $VAR_NAME не задан, пропуск..."
-    return
-  fi
-
-  IFS=',' read -ra PORTS <<< "$VAR_VALUE"
-  for PORT in "${PORTS[@]}"; do
-    PORT=$(echo "$PORT" | tr -d ' ')
-    iptables -A INPUT -p tcp --dport "$PORT" -j ACCEPT
-    iptables -A INPUT -p udp --dport "$PORT" -j ACCEPT
-  done
+local VAR_NAME=$1
+local VAR_VALUE=${!VAR_NAME:-}
+if [ -z "$VAR_VALUE" ]; then
+  echo "⚠ $VAR_NAME не задан, пропуск..."
+  return
+fi
+IFS=',' read -ra PORTS <<< "$VAR_VALUE"
+for PORT in "${PORTS[@]}"; do
+  PORT=$(echo "$PORT" | tr -d ' ')
+  iptables -A INPUT -p tcp --dport "$PORT" -j ACCEPT
+  iptables -A INPUT -p udp --dport "$PORT" -j ACCEPT
+done
 }
 add_ports "EXTRA_PORTS"
 # Доступ к сервисам
