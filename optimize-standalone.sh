@@ -6,6 +6,7 @@
 # Перед применением экспортируй необходимые переменные:
 # export SSH_PORT - порт SSH, PUB_KEY - публичный ключ, ALLOWED_IP - ip RW, ALLOWED_PORT - порт RW
 # Для белой ноды export EXTRA_PORTS="555,667"
+# Если указан export BEARER="token API", домен автоматически берется с cf
 # Обязательно иметь привязанный домен для ноды
 
 set -euo pipefail
@@ -30,7 +31,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true
 apt-get upgrade -y -qq || true
 apt-get install -y ca-certificates curl irqbalance ethtool >/dev/null 2>&1 || true
-apt-get install -y fail2ban nano dnsutils >/dev/null 2>&1 || true
+apt-get install -y fail2ban nano dnsutils jq >/dev/null 2>&1 || true
 echo "✓ Зависимости"
 
 # ─── 1.1. Перезагрузка ───
@@ -462,15 +463,39 @@ echo "✓ SSHD перезагружен"
 # ─── 8.5 CertBot ───
 echo "▶ Установка CertBot..."
 domain_check() {
-read -rp "Введите домен ноды: " DOMAIN
-declare -g DOMAIN
-VPS_IP=$(curl -s https://api.ipify.org 2>/dev/null)
-DOMAIN_IP=$(dig +short "$DOMAIN" A | tail -1)
-echo "IP server : $VPS_IP, IP domain : $DOMAIN_IP"
-if [ "$VPS_IP" != "$DOMAIN_IP" ]; then
-  echo "⚠ Домен не совпадает с нодой"
-  domain_check
-fi
+  VPS_IP=$(curl -s https://api.ipify.org 2>/dev/null)
+  echo "IP сервера: $VPS_IP"
+  if [ -n "$BEARER" ]; then
+    echo "🔑 Найден CF токен, определение домена по ip..."
+    DOMAIN=$(curl -s "https://api.cloudflare.com/client/v4/zones?per_page=500" \
+      -H "Authorization: Bearer $BEARER" | \
+      jq -r '.result[].id' | \
+      while read -r ZONE_ID; do
+        curl -s "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?type=A&content=${VPS_IP}" \
+          -H "Authorization: Bearer $BEARER" | \
+          jq -r '.result[].name'
+      done | head -1)
+    if [ -z "$DOMAIN" ]; then
+      echo "⚠ IP $VPS_IP не найден в Cloudflare"
+      read -rp "Повторить попытку? (y/n): " RETRY
+      [ "$RETRY" = "y" ] && domain_check
+      return 1
+    fi
+    echo "✓ Домен найден: $DOMAIN"
+    declare -g DOMAIN
+  else
+    echo "⚠ Токен CF не найден, ручная проверка..."
+    read -rp "Введите домен ноды: " DOMAIN
+    declare -g DOMAIN
+    DOMAIN_IP=$(dig +short "$DOMAIN" A | tail -1)
+    echo "IP домена ($DOMAIN): $DOMAIN_IP"
+    if [ "$VPS_IP" != "$DOMAIN_IP" ]; then
+      echo "⚠ Домен не совпадает с нодой"
+      domain_check
+      return
+    fi
+  fi
+  echo "✓ Домен: $DOMAIN → $VPS_IP"
 }
 domain_check
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
