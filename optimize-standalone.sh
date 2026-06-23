@@ -595,7 +595,8 @@ services:
       - /var/lib/remnanode/runetfreedomsite.dat:/usr/local/share/xray/runetfreedomsite.dat    # Дополнительный geosite
       # - /var/log/remnanode:/var/log/remnanode                                               # Логи контейнер -> нода
       - /dev/shm:/dev/shm                                                                     # RN socket
-      - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl                   # SSL сертификаты
+      - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl:ro                # SSL сертификаты
+      - /opt/certbot/certs/archive/$DOMAIN:/var/lib/remnanode/configs/archive/$DOMAIN:ro      # SSL сертификаты
 DOCKER
 
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
