@@ -278,18 +278,14 @@ echo "✓ THP отключен"
 
 # ─── 8.1 UFW iptables default ───
 echo "▶ Сброс UFW и iptables..."
-ufw disable >/dev/null 2>&1
-ufw --force reset >/dev/null 2>&1
-ufw default deny incoming >/dev/null 2>&1
-ufw default allow outgoing >/dev/null 2>&1
+ufw disable >/dev/null 2>&1 || true
+ufw --force reset >/dev/null 2>&1 || true
+ufw default deny incoming >/dev/null 2>&1 || true
+ufw default allow outgoing >/dev/null 2>&1 || true
 iptables -P INPUT ACCEPT && iptables -P FORWARD ACCEPT && iptables -P OUTPUT ACCEPT && iptables -F && iptables -X && iptables -Z
 ip6tables -P INPUT ACCEPT && ip6tables -P FORWARD ACCEPT && ip6tables -P OUTPUT ACCEPT && ip6tables -F && ip6tables -X && ip6tables -Z
-if command -v netfilter-persistent >/dev/null 2>&1; then
-  netfilter-persistent save
-else
-  mkdir -p /etc/iptables
-  iptables-save > /etc/iptables/rules.v4
-fi
+mkdir -p /etc/iptables
+systemctl enable netfilter-persistent >/dev/null 2>&1 || true
 echo "✓ UFW отключен, ipitables сброшен"
 
 # ─── 8.2 Настройка iptables ───
