@@ -30,7 +30,7 @@ echo "▶ Установка зависимостей..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true
 apt-get upgrade -y -qq || true
-apt-get install -y ca-certificates curl irqbalance ethtool >/dev/null 2>&1 || true
+apt-get install -y ca-certificates curl irqbalance ethtool iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
 apt-get install -y fail2ban nano dnsutils jq >/dev/null 2>&1 || true
 echo "✓ Зависимости"
 
@@ -412,8 +412,6 @@ iptables -A PORT_SCAN -j DROP
 iptables -A INPUT -p tcp --syn -m conntrack --ctstate NEW -j PORT_SCAN
 # Финальный сброс
 iptables -A INPUT -j DROP
-# Сохранение правил
-iptables-save > /etc/iptables/rules.v4
 # Очистка
 ip6tables -F
 ip6tables -X
@@ -421,7 +419,10 @@ ip6tables -P INPUT DROP
 ip6tables -P FORWARD DROP
 ip6tables -P OUTPUT DROP
 # Сохранение правил
+iptables-save > /etc/iptables/rules.v4
 ip6tables-save > /etc/iptables/rules.v6
+systemctl enable netfilter-persistent >/dev/null 2>&1 || true
+netfilter-persistent save >/dev/null 2>&1 || true
 echo "✓ iptables настроен"
 
 # ─── 8.3 Настройка fail2ban ───
