@@ -30,8 +30,21 @@ echo "▶ Установка зависимостей..."
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq || true
 apt-get upgrade -y -qq || true
-apt-get install -y ca-certificates curl irqbalance ethtool iptables-persistent netfilter-persistent >/dev/null 2>&1 || true
-apt-get install -y fail2ban nano dnsutils jq >/dev/null 2>&1 || true
+apt-get install -y \
+  ca-certificates curl wget \
+  irqbalance ethtool \
+  iptables-persistent netfilter-persistent \
+  cron \
+  tcpdump fail2ban \
+  nano \
+  dnsutils jq \
+  iproute2 net-tools iputils-ping traceroute mtr-tiny \
+  htop lsof sysstat \
+  openssl \
+  ncdu logrotate \
+  apt-transport-https gnupg lsb-release \
+  >/dev/null 2>&1 || true
+unset DEBIAN_FRONTEND
 echo "✓ Зависимости"
 
 # ─── 1.1. Перезагрузка ───
@@ -88,10 +101,10 @@ net.ipv4.tcp_timestamps           = 1
 # UDP
 net.ipv4.udp_rmem_min             = 8192
 net.ipv4.udp_wmem_min             = 8192
-# IP forwarding (для XRay/VLESS host network)
+# IP forwarding (for XRay/VLESS host network)
 net.ipv4.ip_forward               = 1
 net.ipv4.conf.all.forwarding      = 1
-# Conntrack — БОЛЬШЕ соединений (главное против "работает потом отключается")
+# Conntrack — MORE connections (the main thing is against "works then turns off")
 net.netfilter.nf_conntrack_max                  = 2000000
 net.nf_conntrack_max                            = 2000000
 net.netfilter.nf_conntrack_tcp_timeout_established = 7440
@@ -100,7 +113,7 @@ net.netfilter.nf_conntrack_buckets              = 500000
 net.ipv4.tcp_syncookies           = 1
 net.ipv4.tcp_synack_retries       = 2
 net.ipv4.tcp_syn_retries          = 2
-# Anti-spoof / ICMP (rp_filter=1 — если асимметричный роутинг ломает, поставь 0)
+# Anti-spoof / ICMP (rp_filter=1 — if asymmetric routing breaks, set this to 0)
 net.ipv4.conf.all.rp_filter                = 1
 net.ipv4.conf.default.rp_filter            = 1
 net.ipv4.conf.all.accept_source_route      = 0
@@ -112,12 +125,12 @@ net.ipv4.conf.default.accept_redirects     = 0
 net.ipv4.conf.all.secure_redirects         = 0
 net.ipv4.icmp_echo_ignore_broadcasts       = 1
 net.ipv4.icmp_ignore_bogus_error_responses = 1
-# Память
+# RAM
 vm.swappiness                = 10
 vm.dirty_ratio               = 10
 vm.dirty_background_ratio    = 5
 vm.overcommit_memory         = 1
-# Файловые дескрипторы
+# File descriptors
 fs.file-max                  = 2097152
 fs.nr_open                   = 2097152
 fs.inotify.max_user_watches  = 524288
@@ -141,19 +154,19 @@ fi
 
 # ─── 2.1. SSHD ───
 echo "▶ Аутентификация по ключу, смена порта..."
-[ -f /etc/ssh/sshd_config.d/99-remnawave-optimize.conf ] && cp /etc/ssh/sshd_config.d/99-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
-cat > /etc/ssh/sshd_config.d/99-remnawave-optimize.conf <<SSHD
+[ -f /etc/ssh/sshd_config.d/98-remnawave-optimize.conf ] && cp /etc/ssh/sshd_config.d/98-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
+cat > /etc/ssh/sshd_config.d/98-remnawave-optimize.conf <<SSHD
 # === remnawave optimize standalone ===
-# Авторизация по ключу
+# Authorization by key
 PubkeyAuthentication yes
-# Смена порта ssh
+# Change ssh port
 Port $SSH_PORT
 SSHD
 
 [ -f /root/.ssh/authorized_keys ] && cp /root/.ssh/authorized_keys "$BACKUP/" 2>/dev/null || true
 cat > /root/.ssh/authorized_keys <<KEYS
 # === remnawave optimize standalone ===
-# Публичный ключ
+# Public key
 $PUB_KEY
 KEYS
 
@@ -206,6 +219,7 @@ fi
 
 # ─── 5. journald ───
 echo "▶ journald → 200M макс..."
+[ -f /etc/sysctl.d/remnawave-size.conf ] && cp /etc/sysctl.d/remnawave-size.conf "$BACKUP/" 2>/dev/null || true
 mkdir -p /etc/systemd/journald.conf.d
 cat > /etc/systemd/journald.conf.d/remnawave-size.conf <<'J'
 [Journal]
@@ -219,6 +233,7 @@ echo "✓ journald"
 echo "▶ NIC tuning..."
 NIC="$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')"
 if [ -n "${NIC:-}" ]; then
+  [ -f /etc/systemd/system/remnawave-nic-tune.service ] && cp /etc/systemd/system/remnawave-nic-tune.service "$BACKUP/" 2>/dev/null || true
   cat > /etc/systemd/system/remnawave-nic-tune.service <<EOF
 [Unit]
 Description=Remnawave NIC tuning ($NIC)
@@ -241,6 +256,7 @@ fi
 # ─── 7. CPU governor → performance ───
 echo "▶ CPU governor..."
 if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
+  [ -f /sys/devices/system/cpu/cpu0/cpufreq ] && cp /sys/devices/system/cpu/cpu0/cpufreq "$BACKUP/" 2>/dev/null || true
   cat > /etc/systemd/system/remnawave-cpu-perf.service <<'EOF'
 [Unit]
 Description=Remnawave CPU governor performance
@@ -261,6 +277,7 @@ fi
 
 # ─── 8. THP off ───
 echo "▶ THP → never..."
+[ -f /etc/systemd/system/remnawave-thp-off.service ] && cp /etc/systemd/system/remnawave-thp-off.service "$BACKUP/" 2>/dev/null || true
 cat > /etc/systemd/system/remnawave-thp-off.service <<'EOF'
 [Unit]
 Description=Disable Transparent Huge Pages
@@ -278,6 +295,8 @@ echo "✓ THP отключен"
 
 # ─── 8.1 UFW iptables default ───
 echo "▶ Сброс UFW и iptables..."
+[ -f /etc/iptables/rules.v4 ] && cp /etc/iptables/rules.v4 "$BACKUP/" 2>/dev/null || true
+[ -f /etc/iptables/rules.v6 ] && cp /etc/iptables/rules.v6 "$BACKUP/" 2>/dev/null || true
 ufw disable >/dev/null 2>&1 || true
 ufw --force reset >/dev/null 2>&1 || true
 ufw default deny incoming >/dev/null 2>&1 || true
@@ -291,7 +310,8 @@ echo "✓ UFW отключен, ipitables сброшен"
 # ─── 8.2 Настройка iptables ───
 echo "▶ Настройка iptables..."
 IFACE=$(ip route get 8.8.8.8 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1); exit}')
-# Очистка
+
+# ─── Очистка ───
 iptables -F INPUT
 iptables -F OUTPUT
 iptables -F FORWARD
@@ -301,75 +321,154 @@ iptables -F PORT_SCAN 2>/dev/null || true
 iptables -F DOCKER-USER 2>/dev/null || true
 iptables -X PORT_SCAN 2>/dev/null || true
 iptables -X DOCKER-USER 2>/dev/null || true
-# Отклонять все по умолчанию
+
+# ─── Политики по умолчанию ───
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
-# Loopback
+
+# ─── Loopback ───
 iptables -A INPUT -i lo -j ACCEPT
-# Разрешить уже установленные соединения
+
+# ─── ИСПРАВЛЕНО: INVALID до ESTABLISHED,RELATED ───
+# INVALID пакеты иначе проскакивают через ESTABLISHED,RELATED
+iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
+
+# ─── Установленные соединения ───
 iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-# Docker
+
+# ─── Docker ───
 iptables -A INPUT -i docker0 -j ACCEPT
 iptables -A FORWARD -i docker0 -o $IFACE -j ACCEPT
 iptables -A FORWARD -i $IFACE -o docker0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 iptables -N DOCKER-USER 2>/dev/null || true
 iptables -I DOCKER-USER -j RETURN
-# Отброс недействительных пакетов
-iptables -A INPUT -m conntrack --ctstate INVALID -j DROP
-# Отброс TCP-пакетов с недопустимыми флагами
+
+# ─── TCP: невалидные флаги ───
+# Нулевые флаги — NULL-сканирование (Nmap -sN)
 iptables -A INPUT -p tcp --tcp-flags ALL NONE -j DROP
-# XMAS сканирование портов
+# Все флаги — XMAS-сканирование (Nmap -sX)
 iptables -A INPUT -p tcp --tcp-flags ALL ALL -j DROP
-# FIN без ACK
+# FIN без ACK — не может быть в легитимном потоке
 iptables -A INPUT -p tcp --tcp-flags ALL FIN -j DROP
-# SYN + FIN
+# SYN + FIN — противоречивая комбинация
 iptables -A INPUT -p tcp --tcp-flags SYN,FIN SYN,FIN -j DROP
-# SYN + RST
+# SYN + RST — противоречивая комбинация
 iptables -A INPUT -p tcp --tcp-flags SYN,RST SYN,RST -j DROP
-# FIN + RST
+# FIN + RST — противоречивая комбинация
 iptables -A INPUT -p tcp --tcp-flags FIN,RST FIN,RST -j DROP
-# Приватные ip
+# PSH без ACK — данные без установленного соединения
+iptables -A INPUT -p tcp --tcp-flags PSH,ACK PSH -j DROP
+# URG без ACK — срочные данные без установленного соединения
+iptables -A INPUT -p tcp --tcp-flags URG,ACK URG -j DROP
+
+# ─── TCP: опасные сценарии (закомментированы — могут задеть легитимный трафик) ───
+#
+# Фрагментированные SYN-пакеты (SYN не должен быть фрагментирован).
+# Осторожно: некоторые промежуточные устройства могут фрагментировать пакеты.
+# iptables -A INPUT -p tcp --tcp-flags SYN,RST,ACK SYN -f -j DROP
+#
+# SYN с нулевым sequence number.
+# Осторожно: требует модуль u32, не везде доступен.
+# iptables -A INPUT -p tcp --tcp-flags SYN,RST,ACK SYN -m u32 --u32 "4&0x3FFF=0" -j DROP
+#
+# SYN на уже ESTABLISHED соединении.
+# Осторожно: может ломать TCP Fast Open (TFO) и некоторые балансировщики.
+# iptables -A INPUT -p tcp --tcp-flags SYN,ACK SYN -m conntrack --ctstate ESTABLISHED -j DROP
+
+# ─── UDP: невалидные пакеты ───
+# Слишком короткий UDP (заголовок 8 байт + минимум данных = 28 байт с IP-заголовком)
+iptables -A INPUT -p udp -m length --length 0:27 -j DROP
+# Зарезервированный порт 0 — не используется легитимно
+iptables -A INPUT -p udp --dport 0 -j DROP
+iptables -A INPUT -p udp --sport 0 -j DROP
+
+# ─── UDP: опасные сценарии (закомментированы) ───
+#
+# Пакеты с одинаковым src и dst портом (UDP loopback-спуфинг).
+# Осторожно: может задеть некоторые VPN-реализации и DNS over same port.
+# iptables -A INPUT -p udp -m u32 --u32 "0>>22&0x3C@0=0x00500050" -j DROP
+
+# ─── QUIC (UDP/443) ───
+# QUIC Initial packet по RFC 9000 должен быть >= 1200 байт.
+# Слишком маленький пакет на UDP/443 — не валидный QUIC.
+# Осторожно: отбросит и мелкие non-QUIC UDP/443 пакеты, если они есть.
+iptables -A INPUT -p udp --dport 443 -m length --length 0:1199 -j DROP
+
+# ─── Приватные IP (спуфинг на внешнем интерфейсе) ───
+# ИСПРАВЛЕНО: Docker ACCEPT до DROP по IFACE, иначе DROP срабатывает первым
+iptables -A INPUT -s 172.16.0.0/12 -i docker0 -j ACCEPT             # Docker
+iptables -A INPUT -s 192.168.0.0/16 -i docker0 -j ACCEPT            # Docker
 iptables -A INPUT -i $IFACE -s 0.0.0.0/8 -j DROP                    # "This" network
 iptables -A INPUT -i $IFACE -s 10.0.0.0/8 -j DROP                   # RFC 1918 private
 iptables -A INPUT -i $IFACE -s 100.64.0.0/10 -j DROP                # Carrier-grade NAT
 iptables -A INPUT -i $IFACE -s 127.0.0.0/8 -j DROP                  # Loopback
 iptables -A INPUT -i $IFACE -s 169.254.0.0/16 -j DROP               # Link-local
-iptables -A INPUT -s 172.16.0.0/12 -i docker0 -j ACCEPT             # Docker
 iptables -A INPUT -i $IFACE -s 172.16.0.0/12 -j DROP                # RFC 1918 private
 iptables -A INPUT -i $IFACE -s 192.0.0.0/24 -j DROP                 # IETF protocol
 iptables -A INPUT -i $IFACE -s 192.0.2.0/24 -j DROP                 # TEST-NET-1
-iptables -A INPUT -s 192.168.0.0/16 -i docker0 -j ACCEPT            # Docker
 iptables -A INPUT -i $IFACE -s 192.168.0.0/16 -j DROP               # RFC 1918 private
 iptables -A INPUT -i $IFACE -s 198.18.0.0/15 -j DROP                # Benchmark testing
 iptables -A INPUT -i $IFACE -s 198.51.100.0/24 -j DROP              # TEST-NET-2
 iptables -A INPUT -i $IFACE -s 203.0.113.0/24 -j DROP               # TEST-NET-3
 iptables -A INPUT -i $IFACE -s 224.0.0.0/4 -j DROP                  # Multicast
 iptables -A INPUT -i $IFACE -s 240.0.0.0/4 -j DROP                  # Reserved
-# SYN флуд
+
+# ─── SYN флуд ───
+# ИСПРАВЛЕНО: добавлен --hashlimit-burst, снижен порог до 10/сек
 iptables -A INPUT -p tcp --syn \
-  -m hashlimit --hashlimit-above 25/sec \
+  -m hashlimit --hashlimit-above 10/sec \
+  --hashlimit-burst 20 \
   --hashlimit-mode srcip \
   --hashlimit-name syn_flood \
   --hashlimit-htable-expire 30000 \
   -j DROP
-# UDP флуд
+
+# ─── UDP флуд ───
 iptables -A INPUT -p udp \
   -m hashlimit --hashlimit-above 50/sec \
+  --hashlimit-burst 100 \
   --hashlimit-mode srcip \
   --hashlimit-name udp_flood \
   --hashlimit-htable-expire 30000 \
   -j DROP
-# Ограничение ICMP - лучше отключить
+
+# ─── ICMP ───
+# Echo-request (ping) с rate limit
 iptables -A INPUT -p icmp --icmp-type echo-request \
   -m limit --limit 5/sec --limit-burst 10 \
   -j ACCEPT
-# Отключение лишних ICMP
-iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
-# Разрешить важные типы ICMP (MTU)
-iptables -A INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT
-iptables -A INPUT -p icmp --icmp-type time-exceeded -j ACCEPT
-# Ограничение одновременных подключений
+# Echo-reply (нужен для исходящего ping, RELATED не всегда покрывает)
+iptables -A INPUT -p icmp --icmp-type echo-reply \
+  -m limit --limit 5/sec --limit-burst 10 \
+  -j ACCEPT
+# Destination Unreachable — нужен для PMTUD, с rate limit
+iptables -A INPUT -p icmp --icmp-type destination-unreachable \
+  -m limit --limit 10/sec --limit-burst 20 \
+  -j ACCEPT
+# Time Exceeded — нужен для traceroute, с rate limit
+iptables -A INPUT -p icmp --icmp-type time-exceeded \
+  -m limit --limit 10/sec --limit-burst 20 \
+  -j ACCEPT
+# Весь остальной ICMP — дроп
+iptables -A INPUT -p icmp -j DROP
+
+# ─── ICMP: опасные сценарии (закомментированы) ───
+#
+# Блокировка ICMP Redirect — может использоваться для MITM атак.
+# Осторожно: если сервер — маршрутизатор или работает за NAT, это сломает маршрутизацию.
+# iptables -A INPUT -p icmp --icmp-type redirect -j DROP
+#
+# Блокировка ICMP Timestamp — утечка времени системы (fingerprinting).
+# Осторожно: некоторые системы мониторинга используют timestamp для RTT.
+# iptables -A INPUT -p icmp --icmp-type timestamp-request -j DROP
+# iptables -A INPUT -p icmp --icmp-type timestamp-reply -j DROP
+#
+# Блокировка ICMP Address Mask — устаревший протокол, почти не используется.
+# iptables -A INPUT -p icmp --icmp-type address-mask-request -j DROP
+# iptables -A INPUT -p icmp --icmp-type address-mask-reply -j DROP
+
+# ─── Ограничение одновременных подключений ───
 iptables -A INPUT -p tcp --syn \
   -m connlimit --connlimit-above 200 \
   --connlimit-mask 32 \
@@ -378,43 +477,50 @@ iptables -A INPUT -p udp \
   -m connlimit --connlimit-above 200 \
   --connlimit-mask 32 \
   -j DROP
-# Дополнительный порты
+
+# ─── Дополнительные порты ───
 add_ports() {
-local VAR_NAME=$1
-local VAR_VALUE=${!VAR_NAME:-}
-if [ -z "$VAR_VALUE" ]; then
-  echo "⚠ $VAR_NAME не задан, пропуск..."
-  return
-fi
-IFS=',' read -ra PORTS <<< "$VAR_VALUE"
-for PORT in "${PORTS[@]}"; do
-  PORT=$(echo "$PORT" | tr -d ' ')
-  iptables -A INPUT -p tcp --dport "$PORT" -j ACCEPT
-  iptables -A INPUT -p udp --dport "$PORT" -j ACCEPT
-done
+  local VAR_NAME=$1
+  local VAR_VALUE=${!VAR_NAME:-}
+  if [ -z "$VAR_VALUE" ]; then
+    echo "⚠ $VAR_NAME не задан, пропуск..."
+    return
+  fi
+  IFS=',' read -ra PORTS <<< "$VAR_VALUE"
+  for PORT in "${PORTS[@]}"; do
+    PORT=$(echo "$PORT" | tr -d ' ')
+    iptables -A INPUT -p tcp --dport "$PORT" -j ACCEPT
+    iptables -A INPUT -p udp --dport "$PORT" -j ACCEPT
+  done
 }
 add_ports "EXTRA_PORTS"
-# Доступ к сервисам
+
+# ─── Доступ к сервисам ───
 iptables -A INPUT -p tcp --dport $SSH_PORT -j ACCEPT                      # SSH
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT                            # HTTPS
-iptables -A INPUT -p udp --dport 443 -j ACCEPT                            # UDP
-iptables -A INPUT -p tcp --dport 80 -j ACCEPT                             # 80
+iptables -A INPUT -p udp --dport 443 -j ACCEPT                            # QUIC/HTTP3
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT                             # HTTP
 iptables -A INPUT -s $ALLOWED_IP -p tcp --dport $ALLOWED_PORT -j ACCEPT   # RW
-# Защита от сканирования портов
-iptables -N PORT_SCAN 
-iptables -A PORT_SCAN -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j RETURN
+
+# ─── Защита от сканирования портов ───
+# ИСПРАВЛЕНО: PORT_SCAN смотрит на RST-ответы, а не на входящие SYN.
+# Старая логика пропускала все новые SYN через цепочку, что ломало легитимные соединения.
+iptables -N PORT_SCAN
+iptables -A PORT_SCAN -m limit --limit 1/s --limit-burst 5 -j RETURN
 iptables -A PORT_SCAN -j DROP
-# Перенаправление отклоненных соеденений в цепоку PORT_SCAN
-iptables -A INPUT -p tcp --syn -m conntrack --ctstate NEW -j PORT_SCAN
-# Финальный сброс
+iptables -A INPUT -p tcp --tcp-flags SYN,ACK,FIN,RST RST -j PORT_SCAN
+
+# ─── Финальный дроп ───
 iptables -A INPUT -j DROP
-# Очистка
+
+# ─── IPv6: полная блокировка ───
 ip6tables -F
 ip6tables -X
 ip6tables -P INPUT DROP
 ip6tables -P FORWARD DROP
 ip6tables -P OUTPUT DROP
-# Сохранение правил
+
+# ─── Сохранение правил ───
 iptables-save > /etc/iptables/rules.v4
 ip6tables-save > /etc/iptables/rules.v6
 systemctl enable netfilter-persistent >/dev/null 2>&1 || true
@@ -423,6 +529,7 @@ echo "✓ iptables настроен"
 
 # ─── 8.3 Настройка fail2ban ───
 echo "▶ Настройка fail2ban..."
+[ -f /etc/fail2ban/jail.local ] && cp /etc/fail2ban/jail.local "$BACKUP/" 2>/dev/null || true
 cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
 ignoreip = 127.0.0.1/8 ::1
@@ -480,7 +587,6 @@ domain_check() {
     fi
     echo "✓ Домен найден: $DOMAIN"
     declare -g DOMAIN
-    export DOMAIN_OPT
   else
     echo "⚠ Токен CF не найден, ручная проверка..."
     read -rp "Введите домен ноды: " DOMAIN
@@ -499,7 +605,7 @@ domain_check() {
 domain_check
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down
-[ -f /opt/certbot/docker-compose.yml ] && cp /opt/certbot/docker-compose.yml "$BACKUP/" 2>/dev/null || true
+[ -f /opt/certbot/docker-compose.yml ] && cp /opt/certbot/docker-compose.yml "$BACKUP/certbot" 2>/dev/null || true
 mkdir -p /opt/certbot/certs /opt/certbot/var-lib-letsencrypt /opt/custom_script
 cat > /opt/certbot/docker-compose.yml <<CERT
 services:
@@ -547,6 +653,8 @@ echo "✓ CertBot настроен"
 
 # ─── 8.6 GEO-файлы ───
 echo "▶ Добавление GEO-файлов..."
+[ -f /var/lib/remnanode/runetfreedomip.dat ] && cp /var/lib/remnanode/runetfreedomip.dat "$BACKUP/" 2>/dev/null || true
+[ -f /var/lib/remnanode/runetfreedomsite.dat ] && cp /var/lib/remnanode/runetfreedomsite.dat "$BACKUP/" 2>/dev/null || true
 wget -O /var/lib/remnanode/runetfreedomip.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat 2>/dev/null
 wget -O /var/lib/remnanode/runetfreedomsite.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat 2>/dev/null
 [ -f /opt/custom_script/geofiles.sh ] && cp /opt/custom_script/geofiles.sh "$BACKUP/" 2>/dev/null || true
@@ -567,7 +675,7 @@ echo "✓ GEO-файлы настроены"
 
 # ─── 8.7 Compose RN ───
 echo "▶ Правка docker-compose RN..."
-[ -f /opt/remnanode/docker-compose.yml ] && cp /opt/remnanode/docker-compose.yml "$BACKUP/" 2>/dev/null || true
+[ -f /opt/remnanode/docker-compose.yml ] && cp /opt/remnanode/docker-compose.yml "$BACKUP/remnanode" 2>/dev/null || true
 cat > /opt/remnanode/docker-compose.yml <<DOCKER
 services:
   remnanode:
