@@ -64,7 +64,7 @@ echo "✓ Временные файлы очищены"
 
 # ─── 2. Sysctl ───
 echo "▶ Sysctl: BBR, буферы, conntrack 2M, fd, anti-spoof..."
-[ -f /etc/sysctl.d/99-remnawave-optimize.conf ] && cp /etc/sysctl.d/99-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
+[ -f /etc/sysctl.d/99-remnawave-optimize.conf ] 2>/dev/null || true && cp /etc/sysctl.d/99-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
 cat > /etc/sysctl.d/99-remnawave-optimize.conf <<'SYSCTL'
 # === remnawave optimize standalone ===
 # Network core
@@ -154,7 +154,7 @@ fi
 
 # ─── 2.1. SSHD ───
 echo "▶ Аутентификация по ключу, смена порта..."
-[ -f /etc/ssh/sshd_config.d/98-remnawave-optimize.conf ] && cp /etc/ssh/sshd_config.d/98-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
+[ -f /etc/ssh/sshd_config.d/98-remnawave-optimize.conf ] 2>/dev/null || true && cp /etc/ssh/sshd_config.d/98-remnawave-optimize.conf "$BACKUP/" 2>/dev/null || true
 cat > /etc/ssh/sshd_config.d/98-remnawave-optimize.conf <<SSHD
 # === remnawave optimize standalone ===
 # Authorization by key
@@ -163,7 +163,7 @@ PubkeyAuthentication yes
 Port $SSH_PORT
 SSHD
 
-[ -f /root/.ssh/authorized_keys ] && cp /root/.ssh/authorized_keys "$BACKUP/" 2>/dev/null || true
+[ -f /root/.ssh/authorized_keys ] 2>/dev/null || true && cp /root/.ssh/authorized_keys "$BACKUP/" 2>/dev/null || true
 cat > /root/.ssh/authorized_keys <<KEYS
 # === remnawave optimize standalone ===
 # Public key
@@ -219,7 +219,7 @@ fi
 
 # ─── 5. journald ───
 echo "▶ journald → 200M макс..."
-[ -f /etc/sysctl.d/remnawave-size.conf ] && cp /etc/sysctl.d/remnawave-size.conf "$BACKUP/" 2>/dev/null || true
+[ -f /etc/sysctl.d/remnawave-size.conf ] 2>/dev/null || true && cp /etc/sysctl.d/remnawave-size.conf "$BACKUP/" 2>/dev/null || true
 mkdir -p /etc/systemd/journald.conf.d
 cat > /etc/systemd/journald.conf.d/remnawave-size.conf <<'J'
 [Journal]
@@ -233,7 +233,7 @@ echo "✓ journald"
 echo "▶ NIC tuning..."
 NIC="$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')"
 if [ -n "${NIC:-}" ]; then
-  [ -f /etc/systemd/system/remnawave-nic-tune.service ] && cp /etc/systemd/system/remnawave-nic-tune.service "$BACKUP/" 2>/dev/null || true
+  [ -f /etc/systemd/system/remnawave-nic-tune.service ] 2>/dev/null || true && cp /etc/systemd/system/remnawave-nic-tune.service "$BACKUP/" 2>/dev/null || true
   cat > /etc/systemd/system/remnawave-nic-tune.service <<EOF
 [Unit]
 Description=Remnawave NIC tuning ($NIC)
@@ -256,7 +256,7 @@ fi
 # ─── 7. CPU governor → performance ───
 echo "▶ CPU governor..."
 if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
-  [ -f /sys/devices/system/cpu/cpu0/cpufreq ] && cp /sys/devices/system/cpu/cpu0/cpufreq "$BACKUP/" 2>/dev/null || true
+  [ -f /sys/devices/system/cpu/cpu0/cpufreq ] 2>/dev/null || true && cp /sys/devices/system/cpu/cpu0/cpufreq "$BACKUP/" 2>/dev/null || true
   cat > /etc/systemd/system/remnawave-cpu-perf.service <<'EOF'
 [Unit]
 Description=Remnawave CPU governor performance
@@ -277,7 +277,7 @@ fi
 
 # ─── 8. THP off ───
 echo "▶ THP → never..."
-[ -f /etc/systemd/system/remnawave-thp-off.service ] && cp /etc/systemd/system/remnawave-thp-off.service "$BACKUP/" 2>/dev/null || true
+[ -f /etc/systemd/system/remnawave-thp-off.service ] 2>/dev/null || true && cp /etc/systemd/system/remnawave-thp-off.service "$BACKUP/" 2>/dev/null || true
 cat > /etc/systemd/system/remnawave-thp-off.service <<'EOF'
 [Unit]
 Description=Disable Transparent Huge Pages
@@ -529,7 +529,7 @@ echo "✓ iptables настроен"
 
 # ─── 8.3 Настройка fail2ban ───
 echo "▶ Настройка fail2ban..."
-[ -f /etc/fail2ban/jail.local ] && cp /etc/fail2ban/jail.local "$BACKUP/" 2>/dev/null || true
+[ -f /etc/fail2ban/jail.local ] 2>/dev/null || true && cp /etc/fail2ban/jail.local "$BACKUP/" 2>/dev/null || true
 cat > /etc/fail2ban/jail.local <<EOF
 [DEFAULT]
 ignoreip = 127.0.0.1/8 ::1
@@ -605,7 +605,7 @@ domain_check() {
 domain_check
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down
-[ -f /opt/certbot/docker-compose.yml ] && cp /opt/certbot/docker-compose.yml "$BACKUP/certbot" 2>/dev/null || true
+[ -f /opt/certbot/docker-compose.yml ] 2>/dev/null || true && cp /opt/certbot/docker-compose.yml "$BACKUP/certbot" 2>/dev/null || true
 mkdir -p /opt/certbot/certs /opt/certbot/var-lib-letsencrypt /opt/custom_script
 cat > /opt/certbot/docker-compose.yml <<CERT
 services:
@@ -626,7 +626,7 @@ docker run --rm \
   --non-interactive --agree-tos \
   --email "email@email.com" \
   -d "$DOMAIN"
-[ -f /opt/custom_script/renew.sh ] && cp /opt/custom_script/renew.sh "$BACKUP/" 2>/dev/null || true
+[ -f /opt/custom_script/renew.sh ] 2>/dev/null || true && cp /opt/custom_script/renew.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/renew.sh" <<'RENEW'
 #!/usr/bin/env bash
 # v1.0
@@ -653,11 +653,11 @@ echo "✓ CertBot настроен"
 
 # ─── 8.6 GEO-файлы ───
 echo "▶ Добавление GEO-файлов..."
-[ -f /var/lib/remnanode/runetfreedomip.dat ] && cp /var/lib/remnanode/runetfreedomip.dat "$BACKUP/" 2>/dev/null || true
-[ -f /var/lib/remnanode/runetfreedomsite.dat ] && cp /var/lib/remnanode/runetfreedomsite.dat "$BACKUP/" 2>/dev/null || true
+[ -f /var/lib/remnanode/runetfreedomip.dat ] 2>/dev/null || true && cp /var/lib/remnanode/runetfreedomip.dat "$BACKUP/" 2>/dev/null || true
+[ -f /var/lib/remnanode/runetfreedomsite.dat ] 2>/dev/null || true && cp /var/lib/remnanode/runetfreedomsite.dat "$BACKUP/" 2>/dev/null || true
 wget -O /var/lib/remnanode/runetfreedomip.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat 2>/dev/null
 wget -O /var/lib/remnanode/runetfreedomsite.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat 2>/dev/null
-[ -f /opt/custom_script/geofiles.sh ] && cp /opt/custom_script/geofiles.sh "$BACKUP/" 2>/dev/null || true
+[ -f /opt/custom_script/geofiles.sh ] 2>/dev/null || true && cp /opt/custom_script/geofiles.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/geofiles.sh" <<'GEO'
 #!/usr/bin/env bash
 # v1.0
@@ -675,7 +675,7 @@ echo "✓ GEO-файлы настроены"
 
 # ─── 8.7 Compose RN ───
 echo "▶ Правка docker-compose RN..."
-[ -f /opt/remnanode/docker-compose.yml ] && cp /opt/remnanode/docker-compose.yml "$BACKUP/remnanode" 2>/dev/null || true
+[ -f /opt/remnanode/docker-compose.yml ] 2>/dev/null || true && cp /opt/remnanode/docker-compose.yml "$BACKUP/remnanode" 2>/dev/null || true
 cat > /opt/remnanode/docker-compose.yml <<DOCKER
 services:
   remnanode:
@@ -710,7 +710,7 @@ echo "✓ docker-compose RN правлен"
 
 # ─── 8.8 apt update ───
 echo "▶ Добавление авто-обновление apt..."
-[ -f /opt/custom_script/apt_update.sh ] && cp /opt/custom_script/apt_update.sh "$BACKUP/" 2>/dev/null || true
+[ -f /opt/custom_script/apt_update.sh ] 2>/dev/null || true && cp /opt/custom_script/apt_update.sh "$BACKUP/" 2>/dev/null || true
 cat > "/opt/custom_script/apt_update.sh" <<'APT'
 #!/usr/bin/env bash
 # v1.0
