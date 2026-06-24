@@ -603,8 +603,8 @@ domain_check() {
   echo "✓ Домен: $DOMAIN → $VPS_IP"
 }
 domain_check
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
-docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down 2>/dev/null || true
+docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down 2>/dev/null || true
 [ -f /opt/certbot/docker-compose.yml ] 2>/dev/null || true && cp /opt/certbot/docker-compose.yml "$BACKUP/certbot" 2>/dev/null || true
 mkdir -p /opt/certbot/certs /opt/certbot/var-lib-letsencrypt /opt/custom_script
 cat > /opt/certbot/docker-compose.yml <<CERT
@@ -645,8 +645,8 @@ docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml u
 echo "✓ Сертификат перевыпущен, контейнеры запущены"
 RENEW
 
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
-docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d 2>/dev/null || true
+docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d 2>/dev/null || true
 chmod +x "/opt/custom_script/renew.sh"
 (crontab -l 2>/dev/null | grep -v "/opt/custom_script/renew.sh" || true; echo "0 3 1 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
 echo "✓ CertBot настроен"
@@ -704,8 +704,8 @@ services:
       - /opt/certbot/certs/archive/$DOMAIN:/var/lib/remnanode/configs/archive/$DOMAIN:ro      # SSL сертификаты
 DOCKER
 
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down 2>/dev/null || true
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d 2>/dev/null || true
 echo "✓ docker-compose RN правлен"
 
 # ─── 8.8 apt update ───
