@@ -605,6 +605,7 @@ domain_check() {
 domain_check
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down 2>/dev/null || true
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down 2>/dev/null || true
+docker compose --project-directory /opt/nginx-selfsteal -f /opt/nginx-selfsteal/docker-compose.yml down 2>/dev/null || true
 [ -f /opt/certbot/docker-compose.yml ] 2>/dev/null || true && cp /opt/certbot/docker-compose.yml "$BACKUP/certbot" 2>/dev/null || true
 mkdir -p /opt/certbot/certs /opt/certbot/var-lib-letsencrypt /opt/custom_script
 cat > /opt/certbot/docker-compose.yml <<CERT
@@ -633,20 +634,23 @@ cat > "/opt/custom_script/renew.sh" <<'RENEW'
 set -euo pipefail
 # Остановка контейнеров
 echo "▶ Остановка контейнеров..."
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down
-docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml down  || true
+docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml down  || true
+docker compose --project-directory /opt/nginx-selfsteal -f /opt/nginx-selfsteal/docker-compose.yml down 2>/dev/null || true
 # Перевыпуск
 echo "▶ Перевыпуск сертификата..."
 docker compose --project-directory /opt/certbot -f /opt/certbot/docker-compose.yml run --rm certbot renew
 # Запуск контейнеры
 echo "▶ Запуск контейнеров..."
-docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d
-docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d
+docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d  || true
+docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d  || true
+docker compose --project-directory /opt/nginx-selfsteal -f /opt/nginx-selfsteal/docker-compose.yml up -d 2>/dev/null || true
 echo "✓ Сертификат перевыпущен, контейнеры запущены"
 RENEW
 
 docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compose.yml up -d 2>/dev/null || true
 docker compose --project-directory /opt/caddy -f /opt/caddy/docker-compose.yml up -d 2>/dev/null || true
+docker compose --project-directory /opt/nginx-selfsteal -f /opt/nginx-selfsteal/docker-compose.yml up -d 2>/dev/null || true
 chmod +x "/opt/custom_script/renew.sh"
 (crontab -l 2>/dev/null | grep -v "/opt/custom_script/renew.sh" || true; echo "0 3 1 * * /opt/custom_script/renew.sh >> /var/log/certbot-renew.log 2>&1") | crontab -
 echo "✓ CertBot настроен"
