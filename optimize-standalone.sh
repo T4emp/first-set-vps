@@ -569,8 +569,22 @@ echo "▶ Установка CertBot..."
 domain_check() {
   VPS_IP=$(curl -s https://api.ipify.org 2>/dev/null)
   echo "IP сервера: $VPS_IP"
+
   if [ -n "$BEARER" ]; then
     echo "🔑 Найден CF токен, определение домена по ip..."
+
+    # Проверка валидности токена
+    CF_AUTH_CHECK=$(curl -s "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+      -H "Authorization: Bearer $BEARER")
+    CF_TOKEN_VALID=$(echo "$CF_AUTH_CHECK" | jq -r '.success')
+
+    if [ "$CF_TOKEN_VALID" != "true" ]; then
+      echo "⚠ Токен CF недействителен, переход на ручную проверку..."
+      BEARER=""
+      domain_check
+      return
+    fi
+
     DOMAIN=$(curl -s "https://api.cloudflare.com/client/v4/zones?per_page=500" \
       -H "Authorization: Bearer $BEARER" | \
       jq -r '.result[].id' | \
@@ -579,20 +593,24 @@ domain_check() {
           -H "Authorization: Bearer $BEARER" | \
           jq -r '.result[].name'
       done | head -1)
+
     if [ -z "$DOMAIN" ]; then
       echo "⚠ IP $VPS_IP не найден в Cloudflare"
       read -rp "Повторить попытку? (y/n): " RETRY
       [ "$RETRY" = "y" ] && domain_check
       return 1
     fi
+
     echo "✓ Домен найден: $DOMAIN"
     declare -g DOMAIN
+
   else
     echo "⚠ Токен CF не найден, ручная проверка..."
     read -rp "Введите домен ноды: " DOMAIN
     declare -g DOMAIN
     DOMAIN_IP=$(dig +short "$DOMAIN" A | tail -1)
     echo "IP домена ($DOMAIN): $DOMAIN_IP"
+
     if [ "$VPS_IP" != "$DOMAIN_IP" ]; then
       echo "⚠ Домен не совпадает с нодой"
       read -rp "Повторить попытку? (y/n): " RETRY
@@ -600,6 +618,7 @@ domain_check() {
       return 1
     fi
   fi
+
   echo "✓ Домен: $DOMAIN → $VPS_IP"
 }
 domain_check
