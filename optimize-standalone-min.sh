@@ -675,26 +675,7 @@ chmod +x "/opt/custom_script/renew.sh"
 echo "✓ CertBot настроен"
 
 # ─── 8.6 GEO-файлы ───
-echo "▶ Добавление GEO-файлов..."
-[ -f /var/lib/remnanode/runetfreedomip.dat ] 2>/dev/null || true && cp /var/lib/remnanode/runetfreedomip.dat "$BACKUP/" 2>/dev/null || true
-[ -f /var/lib/remnanode/runetfreedomsite.dat ] 2>/dev/null || true && cp /var/lib/remnanode/runetfreedomsite.dat "$BACKUP/" 2>/dev/null || true
-wget -O /var/lib/remnanode/runetfreedomip.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat 2>/dev/null
-wget -O /var/lib/remnanode/runetfreedomsite.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat 2>/dev/null
-[ -f /opt/custom_script/geofiles.sh ] 2>/dev/null || true && cp /opt/custom_script/geofiles.sh "$BACKUP/" 2>/dev/null || true
-cat > "/opt/custom_script/geofiles.sh" <<'GEO'
-#!/usr/bin/env bash
-# v1.0
-set -euo pipefail
-# Обновление GEO-файлов
-echo "▶ Обновление GEO-файлов..."
-wget -O /var/lib/remnanode/runetfreedomip.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat
-wget -O /var/lib/remnanode/runetfreedomsite.dat https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat
-echo "✓ GEO-файлы обновлены"
-GEO
-
-chmod +x "/opt/custom_script/geofiles.sh"
-(crontab -l 2>/dev/null | grep -v "/opt/custom_script/geofiles.sh" || true; echo "0 3 * * 7 /opt/custom_script/geofiles.sh >> /var/log/geofiles.log 2>&1") | crontab -
-echo "✓ GEO-файлы настроены"
+# Removed
 
 # ─── 8.7 Compose RN ───
 echo "▶ Правка docker-compose RN..."
@@ -719,8 +700,6 @@ services:
       - /var/lib/remnanode/xray:/usr/local/bin/xray                                           # Движок xray
       - /var/lib/remnanode/geoip.dat:/usr/local/share/xray/geoip.dat                          # Стандартный geoip
       - /var/lib/remnanode/geosite.dat:/usr/local/share/xray/geosite.dat                      # Стандартный geosite
-      - /var/lib/remnanode/runetfreedomip.dat:/usr/local/share/xray/runetfreedomip.dat        # Дополнительный geoip
-      - /var/lib/remnanode/runetfreedomsite.dat:/usr/local/share/xray/runetfreedomsite.dat    # Дополнительный geosite
       # - /var/log/remnanode:/var/log/remnanode                                               # Логи контейнер -> нода
       - /dev/shm:/dev/shm                                                                     # RN socket
       - /opt/certbot/certs/live/$DOMAIN:/var/lib/remnanode/configs/xray/ssl:ro                # SSL сертификаты
@@ -732,34 +711,7 @@ docker compose --project-directory /opt/remnanode -f /opt/remnanode/docker-compo
 echo "✓ docker-compose RN правлен"
 
 # ─── 8.8 apt update ───
-echo "▶ Добавление авто-обновление apt..."
-[ -f /opt/custom_script/apt_update.sh ] 2>/dev/null || true && cp /opt/custom_script/apt_update.sh "$BACKUP/" 2>/dev/null || true
-cat > "/opt/custom_script/apt_update.sh" <<'APT'
-#!/usr/bin/env bash
-# v1.0
-set -euo pipefail
-# Обновление apt
-echo "▶ Обновление apt..."
-apt-get update -qq || true
-apt-get upgrade -y -qq || true
-# Очистка
-echo "▶ Очистка временных файлов..."
-apt autoremove -y || true
-apt clean
-echo "✓ Временные файлы очищены"
-# Перезагрузка
-echo "▶ Проверка перезагрузки..."
-if [ -f "/var/run/reboot-required" ]; then
-  echo "*** System restart required ***"
-  reboot
-  exit 1
-fi
-echo "✓ Перезагрузка не требуется"
-APT
-
-chmod +x "/opt/custom_script/apt_update.sh"
-(crontab -l 2>/dev/null | grep -v "/opt/custom_script/apt_update.sh" || true; echo "0 5 * * 7 /opt/custom_script/apt_update.sh >> /var/log/apt_update.log 2>&1") | crontab -
-echo "✓ Авто-обновление добавлено"
+# Removed
 
 # ─── 9. irqbalance ───
 systemctl enable --now irqbalance >/dev/null 2>&1 || true
