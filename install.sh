@@ -6,19 +6,19 @@
 set -e
 
 # -----------------------------------------------------------------------------
-# Обязательные переменные (падает с ошибкой если не передано)
+# Обязательные переменные
 # -----------------------------------------------------------------------------
-GITHUB_REPO="${GITHUB_REPO:?'Ошибка: укажи GITHUB_REPO (например T4emp/first-set-vps)'}"
-GITHUB_BRANCH="${GITHUB_BRANCH:?'Ошибка: укажи GITHUB_BRANCH (например main)'}"
-MINIO_HOST="${MINIO_HOST:?'Ошибка: укажи MINIO_HOST (например https://minio.example.com)'}"
+GITHUB_REPO="${GITHUB_REPO:?'Ошибка: укажи GITHUB_REPO'}"
+GITHUB_BRANCH="${GITHUB_BRANCH:?'Ошибка: укажи GITHUB_BRANCH'}"
+MINIO_HOST="${MINIO_HOST:?'Ошибка: укажи MINIO_HOST'}"
 MINIO_BUCKET="${MINIO_BUCKET:?'Ошибка: укажи MINIO_BUCKET'}"
 MINIO_ACCESS="${MINIO_ACCESS:?'Ошибка: укажи MINIO_ACCESS'}"
 MINIO_SECRET="${MINIO_SECRET:?'Ошибка: укажи MINIO_SECRET'}"
-TGUARD_PATH="${TGUARD_PATH:?'Ошибка: укажи TGUARD_PATH (например /root/tguard)'}"
-OPTIMIZE_PATH="${OPTIMIZE_PATH:?'Ошибка: укажи OPTIMIZE_PATH (например /root/optimize)'}"
+TGUARD_PATH="${TGUARD_PATH:?'Ошибка: укажи TGUARD_PATH'}"
+OPTIMIZE_PATH="${OPTIMIZE_PATH:?'Ошибка: укажи OPTIMIZE_PATH'}"
 
 # -----------------------------------------------------------------------------
-# Производные переменные (не передаются, вычисляются сами)
+# Производные переменные
 # -----------------------------------------------------------------------------
 GITHUB_RAW="https://raw.githubusercontent.com/$GITHUB_REPO/$GITHUB_BRANCH"
 GITHUB_API="https://api.github.com/repos/$GITHUB_REPO"
@@ -49,28 +49,33 @@ git_blob_hash() {
 }
 
 # -----------------------------------------------------------------------------
-# Функция: получить SHA1 файла через GitHub API
+# Функция: получить список ТОЛЬКО файлов (blob) в папке через GitHub API
+# Возвращает: путь|sha для каждого файла
 # -----------------------------------------------------------------------------
-github_file_hash() {
-    local path="$1"
-    curl -s "$GITHUB_API/contents/$path?ref=$GITHUB_BRANCH" \
-        | grep '"sha"' | head -1 | cut -d'"' -f4
+github_list_blobs() {
+    local folder="$1"
+    curl -s "$GITHUB_API/git/trees/$GITHUB_BRANCH?recursive=1" \
+        | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for item in data.get('tree', []):
+    if item['type'] == 'blob' and item['path'].startswith('$folder/'):
+        print(item['path'] + '|' + item['sha'])
+"
 }
 
 # -----------------------------------------------------------------------------
-# Функция: скачать файл с GitHub если изменился
+# Функция: скачать файл с GitHub если изменился (сравнение по blob SHA1)
 # -----------------------------------------------------------------------------
 sync_github_file() {
     local repo_path="$1"
-    local local_path="$2"
-
-    local remote_hash
-    remote_hash=$(github_file_hash "$repo_path")
+    local remote_sha="$2"
+    local local_path="$3"
 
     if [[ -f "$local_path" ]]; then
         local local_hash
         local_hash=$(git_blob_hash "$local_path")
-        if [[ "$local_hash" == "$remote_hash" ]]; then
+        if [[ "$local_hash" == "$remote_sha" ]]; then
             warn "Без изменений: $repo_path"
             return 0
         fi
@@ -79,17 +84,6 @@ sync_github_file() {
     mkdir -p "$(dirname "$local_path")"
     curl -s "$GITHUB_RAW/$repo_path" -o "$local_path"
     log "Обновлён: $repo_path"
-}
-
-# -----------------------------------------------------------------------------
-# Функция: получить список файлов папки через GitHub API
-# -----------------------------------------------------------------------------
-github_list_files() {
-    local folder="$1"
-    curl -s "$GITHUB_API/git/trees/$GITHUB_BRANCH?recursive=1" \
-        | grep '"path"' \
-        | cut -d'"' -f4 \
-        | grep "^$folder/"
 }
 
 # -----------------------------------------------------------------------------
@@ -119,7 +113,7 @@ sync_minio_file() {
 }
 
 # -----------------------------------------------------------------------------
-# Функция: скачать папку с MinIO (очищает перед заменой)
+# Функция: скачать папку с MinIO (очищает содержимое перед заменой)
 # -----------------------------------------------------------------------------
 sync_minio_folder() {
     local minio_path="$1"
@@ -144,6 +138,8 @@ cleanup() {
     rm -f "$MC_BIN"
     unset MINIO_ACCESS MINIO_SECRET MINIO_HOST MINIO_BUCKET
     unset GITHUB_REPO GITHUB_BRANCH TGUARD_PATH OPTIMIZE_PATH
+    # Удаляем последнюю запись из истории (команду запуска этого скрипта)
+    history -d $(history 1 | awk '{print $1}') 2>/dev/null || true
     log "Временные файлы и credentials очищены"
 }
 trap cleanup EXIT
@@ -159,30 +155,32 @@ echo ""
 
 # --- tguard: файлы с GitHub ---
 log "Синхронизируем tguard с GitHub..."
-for repo_file in $(github_list_files "tguard"); do
-    local_file="$TGUARD_PATH/${repo_file#tguard/}"
-    sync_github_file "$repo_file" "$local_file"
-done
-chmod +x "$TGUARD_PATH/tguard.sh" 2>/dev/null || true
-chmod +x "$TGUARD_PATH/setup-cron.sh" 2>/dev/null || true
-chmod +x "$TGUARD_PATH/lib/"*.sh 2>/dev/null || true
+while IFS='|' read -r repo_path remote_sha; do
+    local_file="$TGUARD_PATH/${repo_path#tguard/}"
+    sync_github_file "$repo_path" "$remote_sha" "$local_file"
+done < <(github_list_blobs "tguard")
+
+chmod +x "$TGUARD_PATH/tguard.sh"       2>/dev/null || true
+chmod +x "$TGUARD_PATH/setup-cron.sh"   2>/dev/null || true
+chmod +x "$TGUARD_PATH/lib/"*.sh        2>/dev/null || true
 
 # --- optimize: файлы с GitHub ---
 log "Синхронизируем optimize с GitHub..."
-for repo_file in $(github_list_files "optimize"); do
-    local_file="$OPTIMIZE_PATH/${repo_file#optimize/}"
-    sync_github_file "$repo_file" "$local_file"
-done
+while IFS='|' read -r repo_path remote_sha; do
+    local_file="$OPTIMIZE_PATH/${repo_path#optimize/}"
+    sync_github_file "$repo_path" "$remote_sha" "$local_file"
+done < <(github_list_blobs "optimize")
+
 chmod +x "$OPTIMIZE_PATH/optimize-standalone.sh" 2>/dev/null || true
 
 # --- Конфиги и листы с MinIO ---
 log "Получаем конфиги с MinIO..."
 install_mc
 
-sync_minio_file   "tguard/tguard.conf"     "$TGUARD_PATH/tguard.conf"
-sync_minio_folder "tguard/lists"            "$TGUARD_PATH/lists"
-sync_minio_folder "tguard/providers"        "$TGUARD_PATH/providers"
-sync_minio_file   "optimize/optimize.conf"  "$OPTIMIZE_PATH/optimize.conf"
+sync_minio_file   "tguard/tguard.conf"    "$TGUARD_PATH/tguard.conf"
+sync_minio_folder "tguard/lists"           "$TGUARD_PATH/lists"
+sync_minio_folder "tguard/providers"       "$TGUARD_PATH/providers"
+sync_minio_file   "optimize/optimize.conf" "$OPTIMIZE_PATH/optimize.conf"
 
 # --- Сохраняем версию ---
 CURRENT_COMMIT=$(curl -s "$GITHUB_API/commits/$GITHUB_BRANCH" \
